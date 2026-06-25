@@ -1,28 +1,25 @@
+import { createGeotechMonitoringMockData } from "@catmap/data";
+import type {
+  GeotechSeries,
+  PiezometerInstrument,
+  PiezometerReading,
+  RainfallReading,
+  SettlementInstrument,
+  SettlementReading,
+  TriggerLevel
+} from "@catmap/geotech";
 import type { GeoInstrument } from "@catmap/maps";
-import type { PiezometerInstrument, PiezometerReading, TriggerLevel } from "@catmap/geotech";
 
-const now = Date.now();
-const hour = 60 * 60 * 1000;
+const mock = createGeotechMonitoringMockData();
 
-export const instrument: PiezometerInstrument = {
-  id: "PZ-001",
-  name: "Piezometer PZ-001",
-  groundElevation: 1240,
-  tipElevation: 1198,
-  location: { latitude: -27.44, longitude: -70.31 }
-};
-
-export const readings: PiezometerReading[] = Array.from({ length: 72 }, (_, index) => ({
-  timestamp: now - (72 - index) * hour,
-  waterLevel: 1210 + Math.sin(index / 6) * 1.8 + index * 0.015,
-  porePressure: 85 + Math.cos(index / 8) * 6,
-  quality: index > 58 ? "warning" : "valid"
-}));
-
-export const thresholds: TriggerLevel[] = [
-  { value: 1211.5, label: "Warning", severity: "warning" },
-  { value: 1213, label: "Critical", severity: "critical" }
-];
+export const piezometerInstrument: PiezometerInstrument = mock.piezometerInstrument;
+export const piezometerReadings: PiezometerReading[] = mock.piezometerReadings;
+export const piezometerThresholds: TriggerLevel[] = mock.piezometerThresholds;
+export const rainfall: RainfallReading[] = mock.rainfall;
+export const settlementInstrument: SettlementInstrument = mock.settlementInstrument;
+export const settlementReadings: SettlementReading[] = mock.settlementReadings;
+export const settlementThresholds: TriggerLevel[] = mock.settlementThresholds;
+export const comparisonSeries: GeotechSeries[] = mock.comparisonSeries;
 
 export const instruments: GeoInstrument[] = [
   {
@@ -32,24 +29,24 @@ export const instruments: GeoInstrument[] = [
     longitude: -70.31,
     latitude: -27.44,
     status: "warning",
-    latestValue: 1211.2
+    latestValue: 1212.2
   },
   {
-    id: "INC-002",
-    name: "Inclinometer INC-002",
-    type: "inclinometer",
+    id: "PZ-002",
+    name: "Piezometer PZ-002",
+    type: "piezometer",
     longitude: -70.316,
     latitude: -27.438,
     status: "normal",
-    latestValue: 3.2
+    latestValue: 1211.7
   },
   {
-    id: "SET-003",
-    name: "Settlement SET-003",
+    id: "SM-014",
+    name: "Settlement marker SM-014",
     type: "settlement",
     longitude: -70.305,
     latitude: -27.445,
     status: "critical",
-    latestValue: 18.5
+    latestValue: 14.7
   }
 ];

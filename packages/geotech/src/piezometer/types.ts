@@ -32,4 +32,6 @@ export interface PiezometerChartOptions {
   yAxis?: "waterLevel" | "porePressure" | "elevation";
   showMissingData?: boolean;
   showThresholds?: boolean;
+  maxPoints?: number;
+  height?: number;
 }

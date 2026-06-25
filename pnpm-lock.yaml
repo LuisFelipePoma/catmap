@@ -47,6 +47,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@catmap/data':
+        specifier: workspace:*
+        version: link:../../packages/data
       '@catmap/geotech':
         specifier: workspace:*
         version: link:../../packages/geotech

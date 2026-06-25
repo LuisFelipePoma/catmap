@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background: #f5f7fb;
   color: #111827;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -12,18 +12,38 @@ body {
 
 main {
   display: grid;
-  gap: 24px;
+  gap: 18px;
   max-width: 1180px;
   margin: 0 auto;
   padding: 24px;
 }
 
 header,
-section {
+.case {
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d9dee8;
   border-radius: 8px;
+}
+
+header {
+  display: grid;
+  gap: 4px;
   padding: 20px;
+}
+
+.case {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.case-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.map-case {
+  max-width: 760px;
 }
 
 h1,
@@ -33,15 +53,21 @@ p {
 }
 
 h1 {
-  font-size: 32px;
+  font-size: 30px;
 }
 
 h2 {
-  margin-bottom: 16px;
   font-size: 18px;
 }
 
-header {
-  display: grid;
-  gap: 6px;
+p {
+  color: #4b5563;
+}
+
+.uplot {
+  width: 100%;
+}
+
+.uplot .u-title {
+  font-size: 14px;
 }

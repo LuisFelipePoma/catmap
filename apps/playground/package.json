@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@catmap/data": "workspace:*",
     "@catmap/geotech": "workspace:*",
     "@catmap/maps": "workspace:*",
     "@catmap/react": "workspace:*",
