@@ -1,5 +1,6 @@
 import type { ChartPoint, TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
 import { BaseTimeSeriesChart } from "../shared/BaseTimeSeriesChart";
+import { missingMarkers } from "../shared/markers";
 import type { SettlementChartOptions, SettlementReading } from "./types";
 
 export class SettlementChart extends BaseTimeSeriesChart<SettlementChartOptions, SettlementReading[]> {
@@ -28,6 +29,16 @@ function toSettlementSpec(options: SettlementChartOptions): TimeSeriesChartSpec 
     maxPoints: options.maxPoints,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
+    markers:
+      options.showMissingData === false
+        ? []
+        : missingMarkers(options.readings, {
+            id: "missing-settlement",
+            label: "Missing data",
+            timestamp: (reading) => reading.timestamp,
+            value: (reading) => reading.settlement,
+            missing: (reading) => reading.settlement === undefined || reading.quality === "missing"
+          }),
     series: [
       {
         id: "settlement",

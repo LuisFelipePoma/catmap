@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import {
   MultiInstrumentChart as CatmapMultiInstrumentChart,
   type MultiInstrumentChartOptions
@@ -13,7 +13,7 @@ export function MultiInstrumentChart({ className, style, ...options }: MultiInst
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<CatmapMultiInstrumentChart | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ref.current) return;
     const chart = new CatmapMultiInstrumentChart(ref.current, options);
     chartRef.current = chart;

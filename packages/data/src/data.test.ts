@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketAggregation, minMaxDecimation } from "./index";
+import { bucketAggregation, decimateTimeSeries, minMaxDecimation } from "./index";
 
 describe("time series utilities", () => {
   it("decimates without exceeding maxPoints", () => {
@@ -28,5 +28,14 @@ describe("time series utilities", () => {
       { timestamp: 0, value: 3 },
       { timestamp: 10, value: 10 }
     ]);
+  });
+
+  it("decimates through the async worker helper fallback", async () => {
+    const points = Array.from({ length: 80 }, (_, index) => ({
+      timestamp: index,
+      value: index
+    }));
+
+    await expect(decimateTimeSeries(points, { maxPoints: 10, useWorker: true })).resolves.toHaveLength(10);
   });
 });

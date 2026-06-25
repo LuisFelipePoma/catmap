@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import {
   PiezometerChart as CatmapPiezometerChart,
   type PiezometerChartOptions
@@ -13,7 +13,7 @@ export function PiezometerChart({ className, style, ...options }: PiezometerChar
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<CatmapPiezometerChart | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ref.current) return;
     const chart = new CatmapPiezometerChart(ref.current, options);
     chartRef.current = chart;

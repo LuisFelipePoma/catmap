@@ -1,19 +1,26 @@
+import { useEffect, useState } from "react";
+import { decimateTimeSeries } from "@catmap/data";
 import {
+  InclinometerProfile,
   InstrumentMap,
   MultiInstrumentChart,
   PiezometerChart,
   RainfallResponseChart,
+  SensorHealthChart,
   SettlementChart
 } from "@catmap/react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "uplot/dist/uPlot.min.css";
 import {
   comparisonSeries,
+  inclinometerCampaigns,
   instruments,
+  largeTimeSeries,
   piezometerInstrument,
   piezometerReadings,
   piezometerThresholds,
   rainfall,
+  sensorHealth,
   settlementInstrument,
   settlementReadings,
   settlementThresholds
@@ -21,6 +28,12 @@ import {
 import "./style.css";
 
 export function App() {
+  const [decimated, setDecimated] = useState(largeTimeSeries.slice(0, 600));
+
+  useEffect(() => {
+    void decimateTimeSeries(largeTimeSeries, { maxPoints: 600, useWorker: true }).then(setDecimated);
+  }, []);
+
   return (
     <main>
       <header>
@@ -74,7 +87,7 @@ export function App() {
       <section className="case">
         <div className="case-copy">
           <h2>Multi-instrument comparison</h2>
-          <p>Three nearby piezometers compared on the same elevation scale.</p>
+          <p>Three nearby piezometers compared on the same elevation scale, with missing markers.</p>
         </div>
         <MultiInstrumentChart
           title="Piezometer comparison"
@@ -82,6 +95,41 @@ export function App() {
           series={comparisonSeries}
           thresholds={piezometerThresholds}
           showThresholds
+        />
+      </section>
+
+      <section className="case">
+        <div className="case-copy">
+          <h2>Inclinometer profile</h2>
+          <p>Three displacement campaigns compared by depth.</p>
+        </div>
+        <InclinometerProfile campaigns={inclinometerCampaigns} axis="displacementX" showMissingData />
+      </section>
+
+      <section className="case">
+        <div className="case-copy">
+          <h2>Sensor health</h2>
+          <p>Uptime, warning and critical percentages by instrument.</p>
+        </div>
+        <SensorHealthChart readings={sensorHealth} />
+      </section>
+
+      <section className="case">
+        <div className="case-copy">
+          <h2>Worker decimation demo</h2>
+          <p>{largeTimeSeries.length.toLocaleString()} readings reduced to {decimated.length.toLocaleString()} points.</p>
+        </div>
+        <MultiInstrumentChart
+          title="Large time series decimation"
+          yLabel="Water level"
+          series={[
+            {
+              id: "decimated",
+              label: "Decimated series",
+              unit: "m",
+              readings: decimated
+            }
+          ]}
         />
       </section>
 

@@ -50,6 +50,34 @@ export function createGeotechMonitoringMockData() {
     }))
   }));
 
+  const inclinometerCampaigns = [20, 55, 95].map((offset, campaignIndex) => ({
+    id: `campaign-${campaignIndex + 1}`,
+    label: `Campaign ${campaignIndex + 1}`,
+    timestamp: start + offset * day,
+    readings: Array.from({ length: 26 }, (_, index) => {
+      const depth = index * 2;
+      const displacement = Math.sin(depth / 8) * (2 + campaignIndex * 1.4) + campaignIndex * depth * 0.06;
+      return {
+        depth,
+        displacementX: round(displacement, 2),
+        displacementY: round(Math.cos(depth / 10) * (1 + campaignIndex * 0.7), 2),
+        quality: index === 11 && campaignIndex === 1 ? ("missing" as const) : ("valid" as const)
+      };
+    })
+  }));
+
+  const sensorHealth = [
+    { instrumentId: "PZ-001", label: "PZ-001", uptime: 97, warning: 2, critical: 1 },
+    { instrumentId: "PZ-002", label: "PZ-002", uptime: 91, warning: 7, critical: 2 },
+    { instrumentId: "SM-014", label: "SM-014", uptime: 88, warning: 8, critical: 4 },
+    { instrumentId: "INC-004", label: "INC-004", uptime: 94, warning: 4, critical: 2 }
+  ];
+
+  const largeTimeSeries = Array.from({ length: 20000 }, (_, index) => ({
+    timestamp: start + index * 60 * 1000,
+    value: round(1210 + Math.sin(index / 90) * 2 + Math.sin(index / 11) * 0.25, 3)
+  }));
+
   return {
     piezometerInstrument: {
       id: "PZ-001",
@@ -74,7 +102,10 @@ export function createGeotechMonitoringMockData() {
       { value: 10, label: "Review", severity: "warning" as const },
       { value: 14, label: "Action", severity: "critical" as const }
     ],
-    comparisonSeries
+    comparisonSeries,
+    inclinometerCampaigns,
+    sensorHealth,
+    largeTimeSeries
   };
 }
 

@@ -1,5 +1,6 @@
-import type { ChartPoint, TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
+import type { ChartMarker, ChartPoint, TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
 import { BaseTimeSeriesChart } from "../shared/BaseTimeSeriesChart";
+import { missingMarkers } from "../shared/markers";
 import type { GeotechSeries, MultiInstrumentChartOptions } from "./types";
 
 const colors = ["#2563eb", "#16a34a", "#dc2626", "#7c3aed", "#f59e0b"];
@@ -33,6 +34,7 @@ function toMultiInstrumentSpec(options: MultiInstrumentChartOptions): TimeSeries
     maxPoints: options.maxPoints,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
+    markers: options.series.flatMap(markersForSeries),
     series: options.series.map((series, index) => ({
       id: series.id,
       label: series.label,
@@ -40,6 +42,16 @@ function toMultiInstrumentSpec(options: MultiInstrumentChartOptions): TimeSeries
       data: toPoints(series)
     }))
   };
+}
+
+function markersForSeries(series: GeotechSeries): ChartMarker[] {
+  return missingMarkers(series.readings, {
+    id: `missing-${series.id}`,
+    label: `${series.label} missing`,
+    timestamp: (reading) => reading.timestamp,
+    value: (reading) => reading.value,
+    missing: (reading) => reading.value === undefined || reading.quality === "missing"
+  });
 }
 
 function toPoints(series: GeotechSeries): ChartPoint[] {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import {
   SettlementChart as CatmapSettlementChart,
   type SettlementChartOptions
@@ -13,7 +13,7 @@ export function SettlementChart({ className, style, ...options }: SettlementChar
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<CatmapSettlementChart | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ref.current) return;
     const chart = new CatmapSettlementChart(ref.current, options);
     chartRef.current = chart;

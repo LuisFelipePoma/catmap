@@ -1,3 +1,7 @@
+export * from "./health/SensorHealthChart";
+export * from "./health/types";
+export * from "./inclinometer/InclinometerProfile";
+export * from "./inclinometer/types";
 export * from "./multi/MultiInstrumentChart";
 export * from "./multi/types";
 export * from "./piezometer/PiezometerChart";

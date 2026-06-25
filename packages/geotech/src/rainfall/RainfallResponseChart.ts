@@ -1,5 +1,6 @@
 import type { ChartPoint, TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
 import { BaseTimeSeriesChart } from "../shared/BaseTimeSeriesChart";
+import { missingMarkers } from "../shared/markers";
 import type { PiezometerReading } from "../piezometer/types";
 import type { RainfallReading, RainfallResponseChartOptions } from "./types";
 
@@ -34,6 +35,13 @@ function toRainfallResponseSpec(options: RainfallResponseChartOptions): TimeSeri
     maxPoints: options.maxPoints,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
+    markers: missingMarkers(options.readings, {
+      id: "missing-rainfall-response",
+      label: "Missing response",
+      timestamp: (reading) => reading.timestamp,
+      value: (reading) => reading[responseAxis],
+      missing: (reading) => reading[responseAxis] === undefined || reading.quality === "missing"
+    }),
     series: [
       {
         id: "rainfall",

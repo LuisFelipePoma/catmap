@@ -25,15 +25,28 @@ export interface TimeSeriesChartSeries {
   kind?: ChartKind | undefined;
   scale?: string | undefined;
   width?: number | undefined;
+  points?: boolean | undefined;
+}
+
+export interface ChartMarker {
+  id: string;
+  label: string;
+  timestamp: number;
+  value: number;
+  color?: string | undefined;
 }
 
 export interface TimeSeriesChartSpec {
   title?: string | undefined;
   height?: number | undefined;
+  xLabel?: string | undefined;
   yLabel?: string | undefined;
+  xTime?: boolean | undefined;
+  invertY?: boolean | undefined;
   maxPoints?: number | undefined;
   showThresholds?: boolean | undefined;
   thresholds?: readonly ChartThreshold[] | undefined;
+  markers?: readonly ChartMarker[] | undefined;
   series: readonly TimeSeriesChartSeries[];
 }
 
@@ -73,6 +86,8 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
     this.options = toUPlotOptions(this.spec, widthOf(container));
     this.data = toUPlotData(this.spec, defaultMaxPoints(this.spec, widthOf(container)));
     this.chart = new uPlot(this.options, this.data, container);
+    this.applyScales();
+    this.settleLayout();
 
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -89,7 +104,8 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
     if (!this.chart) return;
     this.chart.setData(this.data);
     this.chart.setSize({ width, height: heightOf(this.container, spec) });
-    this.chart.redraw();
+    this.applyScales();
+    this.settleLayout();
   }
 
   setData(data: UPlotData): void {
@@ -105,6 +121,41 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
     this.chart?.setSize({ width, height });
   }
 
+  private settleLayout(): void {
+    const redraw = () => {
+      this.resize();
+      this.chart?.redraw();
+    };
+
+    redraw();
+    if (typeof requestAnimationFrame === "undefined") return;
+    requestAnimationFrame(() => requestAnimationFrame(redraw));
+  }
+
+  private applyScales(): void {
+    if (!this.chart) return;
+    const xRange = dataRange(this.data[0]);
+    if (xRange) this.chart.setScale("x", paddedMinMax(xRange.min, xRange.max, false));
+
+    const series = chartSeries(this.spec);
+    const valuesByScale = new Map<string, number[]>();
+    series.forEach((series, index) => {
+      const scale = series.scale ?? "y";
+      const values = valuesByScale.get(scale) ?? [];
+      for (const value of this.data[index + 1] ?? []) {
+        if (typeof value === "number" && Number.isFinite(value)) values.push(value);
+      }
+      valuesByScale.set(scale, values);
+    });
+
+    for (const [scale, values] of valuesByScale) {
+      const range = dataRange(values);
+      if (!range) continue;
+      const includeZero = series.some((series) => (series.scale ?? "y") === scale && series.kind === "bar");
+      this.chart.setScale(scale, paddedMinMax(range.min, range.max, includeZero));
+    }
+  }
+
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.chart?.destroy();
@@ -114,13 +165,33 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
   }
 }
 
+function dataRange(values: readonly number[]): { min: number; max: number } | null {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const value of values) {
+    if (!Number.isFinite(value)) continue;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  return min === Infinity ? null : { min, max };
+}
+
+function paddedMinMax(min: number, max: number, includeZero: boolean): { min: number; max: number } {
+  const rangeMin = includeZero ? Math.min(0, min) : min;
+  const rangeMax = includeZero ? Math.max(0, max) : max;
+  const span = rangeMax - rangeMin || Math.max(Math.abs(rangeMax), 1);
+  const pad = span * 0.08;
+  return { min: rangeMin - pad, max: rangeMax + pad };
+}
+
 export function toUPlotData(spec: TimeSeriesChartSpec, maxPoints: number): UPlotData {
-  const timestamps = sortedTimestamps(spec.series);
-  const decimatedTimestamps = decimateTimestamps(timestamps, maxPoints, spec.series[0]?.data ?? []);
+  const series = chartSeries(spec);
+  const timestamps = sortedTimestamps(series);
+  const decimatedTimestamps = decimateTimestamps(timestamps, maxPoints, series[0]?.data ?? []);
 
   return [
-    decimatedTimestamps.map((timestamp) => timestamp / 1000),
-    ...spec.series.map((series) => {
+    decimatedTimestamps.map((timestamp) => (spec.xTime === false ? timestamp : timestamp / 1000)),
+    ...series.map((series) => {
       const values = new Map(series.data.map((point) => [point.timestamp, point.value]));
       return decimatedTimestamps.map((timestamp) => values.get(timestamp) ?? null);
     })
@@ -128,11 +199,19 @@ export function toUPlotData(spec: TimeSeriesChartSpec, maxPoints: number): UPlot
 }
 
 function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options {
-  const scales: Record<string, uPlot.Scale> = { x: { time: true }, y: {} };
-  const axes: uPlot.Axis[] = [{}, { ...(spec.yLabel ? { label: spec.yLabel } : {}), scale: "y" }];
+  const series = chartSeries(spec);
+  const yNeedsZero = series.some((series) => (series.scale ?? "y") === "y" && series.kind === "bar");
+  const scales: Record<string, uPlot.Scale> = {
+    x: { time: spec.xTime !== false },
+    y: { range: paddedRange(yNeedsZero), ...(spec.invertY ? { dir: -1 } : {}) }
+  };
+  const axes: uPlot.Axis[] = [
+    { ...(spec.xLabel ? { label: spec.xLabel } : {}) },
+    { ...(spec.yLabel ? { label: spec.yLabel } : {}), scale: "y" }
+  ];
 
-  if (spec.series.some((series) => series.scale === "rainfall")) {
-    scales.rainfall = { dir: -1 };
+  if (series.some((series) => series.scale === "rainfall")) {
+    scales.rainfall = { dir: -1, range: paddedRange(true) };
     axes.push({ label: "Rainfall", scale: "rainfall", side: 1 });
   }
 
@@ -144,17 +223,28 @@ function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options
     axes,
     series: [
       { label: "Time" },
-      ...spec.series.map((series) => {
+      ...series.map((series) => {
         const isBar = series.kind === "bar";
         const barPaths = isBar ? uPlot.paths.bars?.({ size: [0.65, 40, 2] }) : undefined;
+        const showPoints = series.points === true;
         return {
           label: series.label,
           scale: series.scale ?? "y",
           stroke: series.color,
-          width: series.width ?? (isBar ? 0 : 2),
+          width: series.width ?? (isBar ? 1 : 2),
           ...(isBar ? { fill: withAlpha(series.color, 0.35) } : {}),
           ...(barPaths ? { paths: barPaths } : {}),
-          points: { show: false }
+          ...(showPoints
+            ? {
+                points: {
+                  show: true,
+                  size: 7,
+                  fill: series.color,
+                  stroke: "#ffffff",
+                  width: 1
+                }
+              }
+            : {})
         };
       })
     ],
@@ -167,6 +257,32 @@ function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options
       ]
     }
   };
+}
+
+function paddedRange(includeZero: boolean): uPlot.Scale.Range {
+  return (_chart, initMin, initMax) => {
+    let min = includeZero ? Math.min(0, initMin) : initMin;
+    let max = includeZero ? Math.max(0, initMax) : initMax;
+    const span = max - min || Math.max(Math.abs(max), 1);
+    const pad = span * 0.08;
+    min -= pad;
+    max += pad;
+    return [min, max];
+  };
+}
+
+function chartSeries(spec: TimeSeriesChartSpec): TimeSeriesChartSeries[] {
+  return [
+    ...spec.series,
+    ...(spec.markers ?? []).map((marker) => ({
+      id: marker.id,
+      label: marker.label,
+      color: marker.color ?? "#dc2626",
+      data: [{ timestamp: marker.timestamp, value: marker.value }],
+      width: 0,
+      points: true
+    }))
+  ];
 }
 
 function sortedTimestamps(series: readonly TimeSeriesChartSeries[]): number[] {

@@ -1,5 +1,6 @@
 import type { ChartPoint, TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
 import { BaseTimeSeriesChart } from "../shared/BaseTimeSeriesChart";
+import { missingMarkers } from "../shared/markers";
 import type { PiezometerChartOptions, PiezometerReading } from "./types";
 
 export class PiezometerChart extends BaseTimeSeriesChart<PiezometerChartOptions, PiezometerReading[]> {
@@ -30,6 +31,16 @@ function toPiezometerSpec(options: PiezometerChartOptions): TimeSeriesChartSpec 
     maxPoints: options.maxPoints,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
+    markers:
+      options.showMissingData === false
+        ? []
+        : missingMarkers(options.readings, {
+            id: "missing-piezometer",
+            label: "Missing data",
+            timestamp: (reading) => reading.timestamp,
+            value: (reading) => reading[yAxis],
+            missing: (reading) => reading[yAxis] === undefined || reading.quality === "missing"
+          }),
     series: [
       {
         id: yAxis,

@@ -1,9 +1,11 @@
 import { createGeotechMonitoringMockData } from "@catmap/data";
 import type {
+  InclinometerCampaign,
   GeotechSeries,
   PiezometerInstrument,
   PiezometerReading,
   RainfallReading,
+  SensorHealthReading,
   SettlementInstrument,
   SettlementReading,
   TriggerLevel
@@ -20,6 +22,9 @@ export const settlementInstrument: SettlementInstrument = mock.settlementInstrum
 export const settlementReadings: SettlementReading[] = mock.settlementReadings;
 export const settlementThresholds: TriggerLevel[] = mock.settlementThresholds;
 export const comparisonSeries: GeotechSeries[] = mock.comparisonSeries;
+export const inclinometerCampaigns: InclinometerCampaign[] = mock.inclinometerCampaigns;
+export const sensorHealth: SensorHealthReading[] = mock.sensorHealth;
+export const largeTimeSeries = mock.largeTimeSeries;
 
 export const instruments: GeoInstrument[] = [
   {

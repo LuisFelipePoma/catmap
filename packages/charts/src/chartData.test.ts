@@ -38,4 +38,23 @@ describe("time series chart data", () => {
 
     expect(toUPlotData(spec, 10)[1]).toEqual([10, null, 11]);
   });
+
+  it("adds marker series to chart data", () => {
+    const spec: TimeSeriesChartSpec = {
+      markers: [{ id: "missing-1", label: "Missing", timestamp: 2, value: 10, color: "#dc2626" }],
+      series: [
+        {
+          id: "water-level",
+          label: "Water level",
+          color: "#2563eb",
+          data: [
+            { timestamp: 1, value: 10 },
+            { timestamp: 3, value: 11 }
+          ]
+        }
+      ]
+    };
+
+    expect(toUPlotData(spec, 10)[2]).toEqual([null, 10, null]);
+  });
 });

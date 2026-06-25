@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import {
   RainfallResponseChart as CatmapRainfallResponseChart,
   type RainfallResponseChartOptions
@@ -13,7 +13,7 @@ export function RainfallResponseChart({ className, style, ...options }: Rainfall
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<CatmapRainfallResponseChart | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ref.current) return;
     const chart = new CatmapRainfallResponseChart(ref.current, options);
     chartRef.current = chart;
