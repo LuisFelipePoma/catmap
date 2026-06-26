@@ -1,84 +1,254 @@
 # catmap
 
-`catmap` is a TypeScript library for geotechnical visualization: sensor readings,
-piezometers, instruments on maps, thresholds, layers, and large time series.
+`catmap` is a TypeScript visualization library for geotechnical monitoring systems. It provides time-series charts, instrument maps, cross-sections, borehole logs, data utilities, and React wrappers while keeping the core contracts framework-agnostic.
 
-The core stays framework-agnostic. React, MapLibre, deck.gl, and uPlot live behind
-package boundaries.
+The library is split by responsibility: data parsing and decimation live in `@catmap/data`, chart renderers live in `@catmap/charts`, map renderers live in `@catmap/maps`, geotechnical views live in `@catmap/geotech`, and React bindings live in `@catmap/react`.
 
-## Stack
+## Features
 
-- TypeScript, pnpm workspaces, Vite
-- tsup for package builds
-- Vitest for tests
-- MapLibre GL JS for maps
-- deck.gl prepared for heavier geospatial layers
-- uPlot for fast time series charts
-- React only in `@catmap/react`
+- Piezometer, settlement, rainfall-response, inclinometer, sensor-health, and multi-instrument charts
+- MapLibre instrument maps with markers, native heatmaps, and precalculated contour isolines
+- SVG cross-section views and borehole logs
+- Time-series decimation, bucket aggregation, in-memory data sources, and Arrow-compatible column loading
+- uPlot time-series rendering plus a lightweight WebGL point renderer with optional OffscreenCanvas support
+- Browser PNG/PDF export helpers for canvas and SVG output
+- React wrappers for geotechnical charts, maps, cross-sections, and borehole logs
 
 ## Packages
 
-- `@catmap/core`: charts, layers, renderer adapters, events, plugins, data contracts
-- `@catmap/data`: time series types, data source, min/max decimation, bucket aggregation
-- `@catmap/charts`: uPlot adapter and chart layers
-- `@catmap/geotech`: geotechnical APIs, charts, cross-sections, and borehole logs
-- `@catmap/maps`: `InstrumentMap`, MapLibre adapter, heatmaps, contours, map layers
-- `@catmap/react`: React wrappers for the geotech and map APIs
-- `apps/playground`: Vite playground with mock geotechnical data
+| Package | Purpose |
+| --- | --- |
+| `@catmap/core` | Framework-agnostic contracts for charts, layers, renderer adapters, events, plugins, and data sources |
+| `@catmap/data` | Time-series types, data sources, decimation, aggregation, mock data, and Arrow-like column import |
+| `@catmap/charts` | uPlot adapter, chart layer helpers, WebGL point renderer, and browser export utilities |
+| `@catmap/geotech` | Domain APIs for geotechnical charts, cross-sections, and borehole logs |
+| `@catmap/maps` | MapLibre adapter, instrument maps, heatmap/contour layers, and GeoJSON helpers |
+| `@catmap/react` | React components wrapping `@catmap/geotech` and `@catmap/maps` APIs |
+| `apps/playground` | Vite playground using mock geotechnical data |
 
-## Usage
+## Installation
+
+This repository is a pnpm workspace. Inside the monorepo, packages consume each other through `workspace:*`.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+For an external application, install only the packages you need once they are published:
+
+```bash
+pnpm add @catmap/react @catmap/geotech @catmap/maps @catmap/data
+```
+
+Peer/runtime dependencies depend on the package surface you use:
+
+- React components require `react >=18`.
+- Map views require `maplibre-gl` styles to be loaded by the application.
+- Time-series charts require `uplot` styles to be loaded by the application.
+
+```ts
+import "maplibre-gl/dist/maplibre-gl.css";
+import "uplot/dist/uPlot.min.css";
+```
+
+## Quick Start
+
+### React
+
+```tsx
+import {
+  BoreholeLog,
+  CrossSectionView,
+  InstrumentMap,
+  PiezometerChart
+} from "@catmap/react";
+
+export function MonitoringDashboard() {
+  return (
+    <>
+      <PiezometerChart
+        instrument={{ id: "PZ-001", name: "Piezometer PZ-001" }}
+        readings={[
+          { timestamp: Date.UTC(2026, 0, 1), waterLevel: 1210.4 },
+          { timestamp: Date.UTC(2026, 0, 2), waterLevel: 1211.2 }
+        ]}
+        thresholds={[
+          { value: 1211.6, label: "Alert", severity: "warning" },
+          { value: 1212.6, label: "Action", severity: "critical" }
+        ]}
+        yAxis="waterLevel"
+        showThresholds
+      />
+
+      <InstrumentMap
+        center={[-70.31, -27.44]}
+        zoom={14}
+        instruments={[
+          {
+            id: "PZ-001",
+            name: "Piezometer PZ-001",
+            type: "piezometer",
+            longitude: -70.31,
+            latitude: -27.44,
+            status: "warning"
+          }
+        ]}
+        heatmap={{
+          points: [{ longitude: -70.31, latitude: -27.44, value: 1.8 }]
+        }}
+        contours={{
+          lines: [
+            {
+              id: "wl-1212",
+              value: 1212,
+              label: "1212 m",
+              coordinates: [
+                [-70.32, -27.45],
+                [-70.31, -27.44],
+                [-70.3, -27.43]
+              ]
+            }
+          ]
+        }}
+      />
+
+      <CrossSectionView
+        title="Section A"
+        series={[
+          {
+            id: "ground",
+            label: "Ground surface",
+            points: [
+              { distance: 0, elevation: 1240 },
+              { distance: 100, elevation: 1233 }
+            ]
+          }
+        ]}
+      />
+
+      <BoreholeLog
+        boreholeId="BH-01"
+        waterLevel={10.5}
+        intervals={[
+          { from: 0, to: 4, label: "Fill" },
+          { from: 4, to: 12, label: "Silty sand" },
+          { from: 12, to: 24, label: "Weathered rock" }
+        ]}
+      />
+    </>
+  );
+}
+```
+
+### Framework-Agnostic APIs
 
 ```ts
 import { PiezometerChart } from "@catmap/geotech";
 
 const chart = new PiezometerChart(container, {
-  instrument,
+  instrument: { id: "PZ-001", name: "Piezometer PZ-001" },
   readings,
   thresholds,
   yAxis: "waterLevel",
   showThresholds: true
 });
 
-chart.updateData(newReadings);
+chart.updateData(nextReadings);
+chart.resize();
 chart.destroy();
 ```
 
-```tsx
-import { InstrumentMap, PiezometerChart } from "@catmap/react";
+```ts
+import { InstrumentMap } from "@catmap/maps";
 
-<PiezometerChart instrument={instrument} readings={readings} thresholds={thresholds} />;
-<InstrumentMap center={[-70.31, -27.44]} zoom={14} instruments={instruments} />;
+const map = new InstrumentMap(container, {
+  center: [-70.31, -27.44],
+  zoom: 14,
+  basemap: "osm"
+});
+
+map.addInstrumentLayer({ instruments });
+map.setHeatmap({ points: heatmapPoints, radius: 32 });
+map.setContours({ lines: contourLines, width: 2 });
+map.destroy();
 ```
 
-## Roadmap
+## Data Utilities
 
-### Fase 1
+```ts
+import {
+  TimeSeriesDataSource,
+  bucketAggregation,
+  decimateTimeSeries,
+  timeSeriesFromArrow
+} from "@catmap/data";
 
-- Monorepo, core contracts, data module
-- `PiezometerChart`, `InstrumentMap`
-- React wrappers
-- Vite playground
-- Basic tests
+const source = new TimeSeriesDataSource(points);
+const { data, total } = await source.query({
+  from: Date.UTC(2026, 0, 1),
+  to: Date.UTC(2026, 0, 31),
+  maxPoints: 600
+});
 
-### Fase 2
+const hourly = bucketAggregation(data, 60 * 60 * 1000);
+const decimated = await decimateTimeSeries(points, { maxPoints: 1000, useWorker: true });
 
-- Inclinometer profile
-- Rainfall overlay
-- Missing data markers
-- Multi-instrument comparison
-- Worker-based decimation
+const fromArrow = timeSeriesFromArrow(arrowTable, {
+  timestampColumn: "timestamp",
+  valueColumn: "water_level",
+  qualityColumn: "quality",
+  timestampUnit: "ms"
+});
 
-### Fase 3
+console.log(total, hourly.length, decimated.length, fromArrow.length);
+```
 
-- Advanced heatmaps: implemented with native MapLibre heatmap layers
-- Contour layer: implemented for precalculated isolines
-- Cross-section view: implemented as framework-agnostic SVG
-- Borehole log: implemented as framework-agnostic SVG
+`timeSeriesFromArrow` accepts Arrow-compatible table objects that expose `getChild(name)` and vector columns with `get(index)`. It intentionally does not parse Arrow IPC files; parse those upstream and pass the table object into `catmap`.
 
-### Fase 4
+## Export Utilities
 
-- Apache Arrow support: implemented through Arrow-compatible column vectors in `@catmap/data`
-- Custom WebGL renderer: implemented as `WebGLPointRenderer` in `@catmap/charts`
-- OffscreenCanvas: supported by `WebGLPointRenderer` and canvas export helpers
-- Optional WebAssembly: supported as an optional WebGL point projector hook
-- PNG/PDF export: implemented for canvas and SVG browser exports
+```ts
+import { canvasToPngBlob, svgToPdfBlob } from "@catmap/charts";
+
+const png = await canvasToPngBlob(canvas);
+const pdf = await svgToPdfBlob(svgElement, {
+  width: 900,
+  height: 500,
+  background: "#ffffff"
+});
+```
+
+Exports run in browser environments. Server-side export should use a browser renderer or a dedicated PDF/image pipeline.
+
+## Development
+
+```bash
+pnpm install
+pnpm dev
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Workspace scripts:
+
+- `pnpm dev`: starts the Vite playground.
+- `pnpm typecheck`: runs TypeScript checks across packages.
+- `pnpm test`: runs Vitest across packages.
+- `pnpm build`: builds package outputs with tsup and the playground with Vite.
+- `pnpm lint`: runs ESLint with zero warnings.
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for completed phases, design constraints, known limitations, and future work.
+
+## Architecture Notes
+
+- `@catmap/core` stays framework-agnostic and renderer-agnostic.
+- React components live only in `@catmap/react`.
+- Concrete rendering engines stay behind package boundaries: uPlot in `@catmap/charts`, MapLibre/deck.gl in `@catmap/maps`.
+- Large-data paths prefer typed arrays, Arrow-compatible columns, chunks, or tiles over object-heavy hot paths.
+- WebGPU, Rust/WASM, backend tiling, and custom parsers should be added only after benchmarks show the current path is the bottleneck.
+
+## License
+
+See [LICENSE](./LICENSE).
