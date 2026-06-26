@@ -50,6 +50,10 @@ header {
   max-width: 620px;
 }
 
+.spectral-case {
+  max-width: 1040px;
+}
+
 h1,
 h2,
 p {

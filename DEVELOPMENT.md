@@ -4,7 +4,7 @@ This document tracks what has been implemented in `catmap`, what was deliberatel
 
 ## Current Status
 
-`catmap` is a TypeScript pnpm workspace for geotechnical visualization. The current implementation covers the original four-phase roadmap:
+`catmap` is a TypeScript pnpm workspace for geotechnical visualization. The current implementation covers the original roadmap plus the spectral waterfall extension:
 
 - Core package contracts and package boundaries
 - Geotechnical charts and React wrappers
@@ -12,6 +12,7 @@ This document tracks what has been implemented in `catmap`, what was deliberatel
 - Cross-section and borehole SVG views
 - Arrow-compatible column loading
 - WebGL point rendering with OffscreenCanvas support
+- Canvas 2D spectral waterfall rendering
 - Browser PNG/PDF export helpers
 
 ## Completed Phases
@@ -75,11 +76,26 @@ Deliberate simplification:
 - No WASM module is bundled. The WebGL renderer accepts an optional projector hook for future use.
 - PDF export is intentionally browser-oriented and minimal. Use a dedicated server-side export pipeline for reporting workflows that require pagination, fonts, headers, or compliance controls.
 
+### Phase 5: Spectral Waterfall Chart
+
+Completed:
+
+- `SpectralWaterfallChart` in `@catmap/charts`.
+- Canvas 2D waterfall view with shifted spectra.
+- Hover, click, and drag selection.
+- Selected-spectrum and cross-section slice panels.
+- React wrapper and playground example.
+- Synthetic spectral mock data.
+
+Deliberate simplification:
+
+- The first version uses Canvas 2D instead of SciChart, WebGL line rendering, workers, or WebGPU. Add those only after benchmarked spectra sizes exceed this path.
+
 ## Package Boundaries
 
 - `@catmap/core`: shared contracts only. No React, MapLibre, uPlot, browser file parsers, or renderer-specific code.
 - `@catmap/data`: data structures, mock data, aggregation, decimation, Arrow-compatible table adapters.
-- `@catmap/charts`: chart renderers, chart layer helpers, WebGL point renderer, canvas/SVG export utilities.
+- `@catmap/charts`: chart renderers, spectral waterfall chart, chart layer helpers, WebGL point renderer, canvas/SVG export utilities.
 - `@catmap/maps`: MapLibre/deck.gl adapters, map layers, instrument map APIs, GeoJSON conversion.
 - `@catmap/geotech`: geotechnical chart/view APIs and domain types.
 - `@catmap/react`: React wrappers only.
@@ -120,7 +136,7 @@ Known note: `pnpm --filter playground build` may warn about a large bundle becau
 - Add WebGPU only after WebGL/uPlot paths are benchmarked and shown insufficient.
 - Add WASM projection/decimation only behind the existing hook-style API.
 - Add renderer benchmarks in the playground or a dedicated benchmark app.
-- Add visual regression smoke tests for charts, maps, cross-sections, and borehole logs.
+- Add visual regression smoke tests for charts, spectral waterfalls, maps, cross-sections, and borehole logs.
 
 ### Exports And Reporting
 
@@ -140,3 +156,4 @@ Known note: `pnpm --filter playground build` may warn about a large bundle becau
 - Browser export helpers do not replace a full reporting engine.
 - Arrow support expects an Arrow-compatible table object, not a raw file buffer.
 - WebGL support is intentionally minimal and focused on point rendering.
+- Spectral waterfalls use Canvas 2D; SciChart-level WebGL throughput is intentionally out of scope until measured.

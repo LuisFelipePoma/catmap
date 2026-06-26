@@ -1,4 +1,5 @@
 import { createGeotechMonitoringMockData } from "@catmap/data";
+import type { WaterfallSpectrum } from "@catmap/charts";
 import type {
   BoreholeInterval,
   CrossSectionInstrument,
@@ -33,6 +34,8 @@ export const crossSectionSeries: CrossSectionSeries[] = mock.crossSectionSeries;
 export const crossSectionInstruments: CrossSectionInstrument[] = mock.crossSectionInstruments;
 export const boreholeIntervals: BoreholeInterval[] = mock.boreholeIntervals;
 export const largeTimeSeries = mock.largeTimeSeries;
+export const spectralX: number[] = mock.spectralX;
+export const spectralSpectra: WaterfallSpectrum[] = mock.spectralSpectra;
 
 export const instruments: GeoInstrument[] = [
   {

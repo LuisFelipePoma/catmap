@@ -6,13 +6,13 @@ The library is split by responsibility: data parsing and decimation live in `@ca
 
 ## Features
 
-- Piezometer, settlement, rainfall-response, inclinometer, sensor-health, and multi-instrument charts
+- Piezometer, settlement, rainfall-response, inclinometer, sensor-health, multi-instrument, and spectral waterfall charts
 - MapLibre instrument maps with markers, native heatmaps, and precalculated contour isolines
 - SVG cross-section views and borehole logs
 - Time-series decimation, bucket aggregation, in-memory data sources, and Arrow-compatible column loading
-- uPlot time-series rendering plus a lightweight WebGL point renderer with optional OffscreenCanvas support
+- uPlot time-series rendering, Canvas 2D spectral waterfall rendering, and a lightweight WebGL point renderer with optional OffscreenCanvas support
 - Browser PNG/PDF export helpers for canvas and SVG output
-- React wrappers for geotechnical charts, maps, cross-sections, and borehole logs
+- React wrappers for geotechnical charts, spectral waterfalls, maps, cross-sections, and borehole logs
 
 ## Packages
 
@@ -20,10 +20,10 @@ The library is split by responsibility: data parsing and decimation live in `@ca
 | --- | --- |
 | `@catmap/core` | Framework-agnostic contracts for charts, layers, renderer adapters, events, plugins, and data sources |
 | `@catmap/data` | Time-series types, data sources, decimation, aggregation, mock data, and Arrow-like column import |
-| `@catmap/charts` | uPlot adapter, chart layer helpers, WebGL point renderer, and browser export utilities |
+| `@catmap/charts` | uPlot adapter, spectral waterfall chart, chart layer helpers, WebGL point renderer, and browser export utilities |
 | `@catmap/geotech` | Domain APIs for geotechnical charts, cross-sections, and borehole logs |
 | `@catmap/maps` | MapLibre adapter, instrument maps, heatmap/contour layers, and GeoJSON helpers |
-| `@catmap/react` | React components wrapping `@catmap/geotech` and `@catmap/maps` APIs |
+| `@catmap/react` | React components wrapping `@catmap/charts`, `@catmap/geotech`, and `@catmap/maps` APIs |
 | `apps/playground` | Vite playground using mock geotechnical data |
 
 ## Installation
@@ -38,7 +38,7 @@ pnpm dev
 For an external application, install only the packages you need once they are published:
 
 ```bash
-pnpm add @catmap/react @catmap/geotech @catmap/maps @catmap/data
+pnpm add @catmap/react @catmap/charts @catmap/geotech @catmap/maps @catmap/data
 ```
 
 Peer/runtime dependencies depend on the package surface you use:
@@ -61,7 +61,8 @@ import {
   BoreholeLog,
   CrossSectionView,
   InstrumentMap,
-  PiezometerChart
+  PiezometerChart,
+  SpectralWaterfallChart
 } from "@catmap/react";
 
 export function MonitoringDashboard() {
@@ -136,6 +137,16 @@ export function MonitoringDashboard() {
           { from: 12, to: 24, label: "Weathered rock" }
         ]}
       />
+
+      <SpectralWaterfallChart
+        title="Interactive waterfall spectral chart"
+        x={[0, 1, 2, 3]}
+        spectra={[
+          { id: "s0", label: "Spectra 0", values: [0, 3, 1, 2] },
+          { id: "s1", label: "Spectra 1", values: [1, 4, 2, 1] }
+        ]}
+        height={420}
+      />
     </>
   );
 }
@@ -172,6 +183,21 @@ map.addInstrumentLayer({ instruments });
 map.setHeatmap({ points: heatmapPoints, radius: 32 });
 map.setContours({ lines: contourLines, width: 2 });
 map.destroy();
+```
+
+```ts
+import { SpectralWaterfallChart } from "@catmap/charts";
+
+const waterfall = new SpectralWaterfallChart(container, {
+  x,
+  spectra,
+  height: 560,
+  onSelectionChange: (selection) => console.log(selection)
+});
+
+waterfall.updateData(nextSpectra);
+waterfall.resize();
+waterfall.destroy();
 ```
 
 ## Data Utilities
@@ -245,7 +271,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for completed phases, design constraints,
 
 - `@catmap/core` stays framework-agnostic and renderer-agnostic.
 - React components live only in `@catmap/react`.
-- Concrete rendering engines stay behind package boundaries: uPlot in `@catmap/charts`, MapLibre/deck.gl in `@catmap/maps`.
+- Concrete rendering engines stay behind package boundaries: uPlot and Canvas 2D in `@catmap/charts`, MapLibre/deck.gl in `@catmap/maps`.
 - Large-data paths prefer typed arrays, Arrow-compatible columns, chunks, or tiles over object-heavy hot paths.
 - WebGPU, Rust/WASM, backend tiling, and custom parsers should be added only after benchmarks show the current path is the bottleneck.
 

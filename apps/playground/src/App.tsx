@@ -9,7 +9,8 @@ import {
   PiezometerChart,
   RainfallResponseChart,
   SensorHealthChart,
-  SettlementChart
+  SettlementChart,
+  SpectralWaterfallChart
 } from "@catmap/react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "uplot/dist/uPlot.min.css";
@@ -30,7 +31,9 @@ import {
   sensorHealth,
   settlementInstrument,
   settlementReadings,
-  settlementThresholds
+  settlementThresholds,
+  spectralSpectra,
+  spectralX
 } from "./data";
 import "./style.css";
 
@@ -102,6 +105,21 @@ export function App() {
           series={comparisonSeries}
           thresholds={piezometerThresholds}
           showThresholds
+        />
+      </section>
+
+      <section className="case spectral-case">
+        <div className="case-copy">
+          <h2>Spectral waterfall</h2>
+          <p>Interactive 2.5D spectra with selected spectrum and cross-section slice.</p>
+        </div>
+        <SpectralWaterfallChart
+          title="Interactive waterfall spectral chart"
+          x={spectralX}
+          spectra={spectralSpectra}
+          height={560}
+          initialSelection={{ spectrumIndex: 0 }}
+          initialSliceIndex={214}
         />
       </section>
 

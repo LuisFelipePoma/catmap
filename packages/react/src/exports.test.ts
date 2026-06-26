@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoreholeLog, CrossSectionView, InclinometerProfile, SensorHealthChart } from "./index";
+import { BoreholeLog, CrossSectionView, InclinometerProfile, SensorHealthChart, SpectralWaterfallChart } from "./index";
 
 describe("react exports", () => {
   it("exports phase 2 chart wrappers", () => {
@@ -7,5 +7,6 @@ describe("react exports", () => {
     expect(typeof SensorHealthChart).toBe("function");
     expect(typeof CrossSectionView).toBe("function");
     expect(typeof BoreholeLog).toBe("function");
+    expect(typeof SpectralWaterfallChart).toBe("function");
   });
 });

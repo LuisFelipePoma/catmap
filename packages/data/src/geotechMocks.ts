@@ -137,6 +137,29 @@ export function createGeotechMonitoringMockData() {
     value: round(1210 + Math.sin(index / 90) * 2 + Math.sin(index / 11) * 0.25, 3)
   }));
 
+  const spectralX = Array.from({ length: 320 }, (_, index) => index);
+  const spectralSpectra = Array.from({ length: 48 }, (_, spectrumIndex) => {
+    const drift = Math.sin(spectrumIndex / 7) * 10;
+    const values = Float32Array.from(spectralX, (x) =>
+      round(
+        -32 +
+          pulse(x, 48 + drift, 10, 42) +
+          pulse(x, 112 - drift * 0.4, 8, 34) +
+          pulse(x, 214 + Math.cos(spectrumIndex / 5) * 12, 18, 56) +
+          Math.sin(x / 7 + spectrumIndex / 3) * 1.8 +
+          Math.sin(spectrumIndex / 4) * 4,
+        2
+      )
+    );
+    values[80 + (spectrumIndex % 6)] = Number.NaN;
+    return {
+      id: `spectra-${spectrumIndex + 1}`,
+      label: `Spectra ${spectrumIndex + 1}`,
+      values,
+      ...(spectrumIndex % 12 === 0 ? { color: "#ff7a1a" } : {})
+    };
+  });
+
   return {
     piezometerInstrument: {
       id: "PZ-001",
@@ -169,7 +192,9 @@ export function createGeotechMonitoringMockData() {
     crossSectionSeries,
     crossSectionInstruments,
     boreholeIntervals,
-    largeTimeSeries
+    largeTimeSeries,
+    spectralX,
+    spectralSpectra
   };
 }
 

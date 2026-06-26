@@ -7,3 +7,4 @@ export * from "./PiezometerChart";
 export * from "./RainfallResponseChart";
 export * from "./SensorHealthChart";
 export * from "./SettlementChart";
+export * from "./SpectralWaterfallChart";
