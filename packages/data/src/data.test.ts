@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketAggregation, decimateTimeSeries, minMaxDecimation } from "./index";
+import { bucketAggregation, decimateTimeSeries, minMaxDecimation, timeSeriesFromArrow } from "./index";
 
 describe("time series utilities", () => {
   it("decimates without exceeding maxPoints", () => {
@@ -38,4 +38,27 @@ describe("time series utilities", () => {
 
     await expect(decimateTimeSeries(points, { maxPoints: 10, useWorker: true })).resolves.toHaveLength(10);
   });
+
+  it("loads time series from Arrow-like columns", () => {
+    const table = arrowTable({
+      timestamp: [1, 2, Number.NaN, 4],
+      value: [10, 11, 12, Infinity],
+      quality: ["valid", "warning", "valid", "critical"]
+    });
+
+    expect(timeSeriesFromArrow(table, { timestampUnit: "s", qualityColumn: "quality" })).toEqual([
+      { timestamp: 1000, value: 10, quality: "valid" },
+      { timestamp: 2000, value: 11, quality: "warning" }
+    ]);
+  });
 });
+
+function arrowTable(columns: Record<string, unknown[]>): { numRows: number; getChild(name: string): { get(index: number): unknown; length: number } | undefined } {
+  return {
+    numRows: Math.max(...Object.values(columns).map((column) => column.length)),
+    getChild(name: string) {
+      const column = columns[name];
+      return column ? { length: column.length, get: (index: number) => column[index] } : undefined;
+    }
+  };
+}

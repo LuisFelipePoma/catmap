@@ -77,8 +77,8 @@ import { InstrumentMap, PiezometerChart } from "@catmap/react";
 
 ### Fase 4
 
-- Apache Arrow support
-- Custom WebGL renderer
-- OffscreenCanvas
-- Optional WebAssembly
-- PNG/PDF export
+- Apache Arrow support: implemented through Arrow-compatible column vectors in `@catmap/data`
+- Custom WebGL renderer: implemented as `WebGLPointRenderer` in `@catmap/charts`
+- OffscreenCanvas: supported by `WebGLPointRenderer` and canvas export helpers
+- Optional WebAssembly: supported as an optional WebGL point projector hook
+- PNG/PDF export: implemented for canvas and SVG browser exports

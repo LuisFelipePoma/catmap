@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toUPlotData, type TimeSeriesChartSpec } from "./index";
+import { createJpegPdf, normalizeWebGLPoints, toUPlotData, type TimeSeriesChartSpec } from "./index";
 
 describe("time series chart data", () => {
   it("decimates without exceeding maxPoints", () => {
@@ -56,5 +56,19 @@ describe("time series chart data", () => {
     };
 
     expect(toUPlotData(spec, 10)[2]).toEqual([null, 10, null]);
+  });
+
+  it("normalizes finite points for WebGL clip space", () => {
+    expect(Array.from(normalizeWebGLPoints([{ x: 0, y: 0 }, { x: 10, y: 20 }, { x: Number.NaN, y: 5 }]))).toEqual([
+      -1, -1, 1, 1
+    ]);
+  });
+
+  it("creates a one-page PDF around JPEG bytes", () => {
+    const pdf = new TextDecoder().decode(createJpegPdf(new Uint8Array([1, 2, 3]), 100, 80));
+
+    expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+    expect(pdf).toContain("/DCTDecode");
+    expect(pdf).toContain("/MediaBox [0 0 100 80]");
   });
 });
