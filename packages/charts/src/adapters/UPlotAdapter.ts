@@ -122,10 +122,7 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
   }
 
   private settleLayout(): void {
-    const redraw = () => {
-      this.resize();
-      this.chart?.redraw();
-    };
+    const redraw = () => this.resize();
 
     redraw();
     if (typeof requestAnimationFrame === "undefined") return;
@@ -134,8 +131,6 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
 
   private applyScales(): void {
     if (!this.chart) return;
-    const xRange = dataRange(this.data[0]);
-    if (xRange) this.chart.setScale("x", paddedMinMax(xRange.min, xRange.max, false));
 
     const series = chartSeries(this.spec);
     const valuesByScale = new Map<string, number[]>();
