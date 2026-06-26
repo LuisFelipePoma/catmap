@@ -1,3 +1,5 @@
+export * from "./BoreholeLog";
+export * from "./CrossSectionView";
 export * from "./InclinometerProfile";
 export * from "./InstrumentMap";
 export * from "./MultiInstrumentChart";

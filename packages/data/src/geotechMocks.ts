@@ -73,6 +73,65 @@ export function createGeotechMonitoringMockData() {
     { instrumentId: "INC-004", label: "INC-004", uptime: 94, warning: 4, critical: 2 }
   ];
 
+  const heatmapPoints = Array.from({ length: 36 }, (_, index) => {
+    const column = index % 6;
+    const row = Math.floor(index / 6);
+    const longitude = -70.322 + column * 0.005;
+    const latitude = -27.452 + row * 0.004;
+    return {
+      id: `hm-${index + 1}`,
+      longitude,
+      latitude,
+      value: round(1 + pulse(column, 2.5, 3, 4) + pulse(row, 3, 2, 3) + Math.sin(index / 3), 2)
+    };
+  });
+
+  const contourColors = ["#16a34a", "#f59e0b", "#dc2626"];
+  const contours = [1211.5, 1212, 1212.5].map((value, index) => ({
+    id: `contour-${index + 1}`,
+    label: `${value} m`,
+    value,
+    color: contourColors[index]!,
+    coordinates: Array.from({ length: 8 }, (_, pointIndex) => [
+      round(-70.323 + pointIndex * 0.004, 5),
+      round(-27.449 + Math.sin(pointIndex / 2 + index) * 0.004 + index * 0.002, 5)
+    ] as [number, number])
+  }));
+
+  const crossSectionSeries = [
+    {
+      id: "ground",
+      label: "Ground surface",
+      color: "#111827",
+      points: Array.from({ length: 8 }, (_, index) => ({
+        distance: index * 40,
+        elevation: round(1240 - index * 1.6 + Math.sin(index / 1.5) * 2, 2)
+      }))
+    },
+    {
+      id: "water",
+      label: "Piezometric level",
+      color: "#2563eb",
+      points: Array.from({ length: 8 }, (_, index) => ({
+        distance: index * 40,
+        elevation: round(1215 - index * 0.9 + Math.cos(index / 1.8) * 1.2, 2)
+      }))
+    }
+  ];
+
+  const crossSectionInstruments = [
+    { id: "PZ-001", label: "PZ-001", distance: 60, elevation: 1238, depth: 42 },
+    { id: "PZ-002", label: "PZ-002", distance: 170, elevation: 1232, depth: 38 },
+    { id: "SM-014", label: "SM-014", distance: 250, elevation: 1228, depth: 2 }
+  ];
+
+  const boreholeIntervals = [
+    { from: 0, to: 4, label: "Fill", color: "#d6d3d1" },
+    { from: 4, to: 12, label: "Silty sand", color: "#fde68a" },
+    { from: 12, to: 24, label: "Weathered rock", color: "#bfdbfe" },
+    { from: 24, to: 42, label: "Andesite", color: "#c4b5fd" }
+  ];
+
   const largeTimeSeries = Array.from({ length: 20000 }, (_, index) => ({
     timestamp: start + index * 60 * 1000,
     value: round(1210 + Math.sin(index / 90) * 2 + Math.sin(index / 11) * 0.25, 3)
@@ -105,6 +164,11 @@ export function createGeotechMonitoringMockData() {
     comparisonSeries,
     inclinometerCampaigns,
     sensorHealth,
+    heatmapPoints,
+    contours,
+    crossSectionSeries,
+    crossSectionInstruments,
+    boreholeIntervals,
     largeTimeSeries
   };
 }

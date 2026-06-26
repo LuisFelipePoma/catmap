@@ -1,5 +1,5 @@
 import { MapLibreAdapter } from "./adapters/MapLibreAdapter";
-import type { GeoInstrument, InstrumentMapOptions } from "./types";
+import type { ContourLayerOptions, GeoInstrument, HeatmapLayerOptions, InstrumentMapOptions } from "./types";
 
 export class InstrumentMap {
   private readonly adapter: MapLibreAdapter;
@@ -15,6 +15,22 @@ export class InstrumentMap {
 
   updateInstruments(instruments: GeoInstrument[]): void {
     this.adapter.setInstruments(instruments);
+  }
+
+  setHeatmap(options: HeatmapLayerOptions): void {
+    this.adapter.setHeatmap(options);
+  }
+
+  clearHeatmap(): void {
+    this.adapter.clearHeatmap();
+  }
+
+  setContours(options: ContourLayerOptions): void {
+    this.adapter.setContours(options);
+  }
+
+  clearContours(): void {
+    this.adapter.clearContours();
   }
 
   destroy(): void {

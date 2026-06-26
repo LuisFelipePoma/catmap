@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
-import { InclinometerProfile, PiezometerChart, RainfallResponseChart, SensorHealthChart } from "./index";
+import {
+  BoreholeLog,
+  CrossSectionView,
+  InclinometerProfile,
+  PiezometerChart,
+  RainfallResponseChart,
+  SensorHealthChart
+} from "./index";
 
 describe("geotech charts", () => {
   it("updates PiezometerChart data without replacing the adapter", () => {
@@ -119,6 +126,34 @@ describe("geotech charts", () => {
 
     expect(adapter.lastSpec?.series).toHaveLength(3);
     expect(adapter.lastSpec?.series[0]?.data[0]).toEqual({ timestamp: 1, value: 95 });
+  });
+
+  it("renders and updates cross-section SVG safely", () => {
+    const container = { innerHTML: "", clientWidth: 400 } as HTMLElement;
+    const view = new CrossSectionView(container, {
+      title: "Section <A>",
+      series: [{ id: "ground", label: "Ground <surface>", points: [{ distance: 0, elevation: 10 }] }]
+    });
+
+    view.updateData([{ id: "ground", label: "Ground <surface>", points: [{ distance: 0, elevation: 10 }, { distance: 10, elevation: 12 }] }]);
+
+    expect(container.innerHTML).toContain("Section &lt;A&gt;");
+    expect(container.innerHTML).toContain("Ground &lt;surface&gt;");
+    expect(container.innerHTML).toContain("<polyline");
+  });
+
+  it("renders and updates borehole log SVG safely", () => {
+    const container = { innerHTML: "", clientWidth: 300 } as HTMLElement;
+    const log = new BoreholeLog(container, {
+      boreholeId: "BH-01",
+      intervals: [{ from: 0, to: 4, label: "Clay & sand" }]
+    });
+
+    log.updateData([{ from: 0, to: 2, label: "Fill <top>" }]);
+
+    expect(container.innerHTML).toContain("BH-01");
+    expect(container.innerHTML).toContain("Fill &lt;top&gt;");
+    expect(container.innerHTML).toContain("<rect");
   });
 });
 

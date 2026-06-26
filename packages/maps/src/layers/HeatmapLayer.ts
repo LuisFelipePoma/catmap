@@ -1,10 +1,11 @@
 import { Layer, type LayerContext, type RenderContext } from "@catmap/core";
+import type { HeatmapLayerOptions } from "../types";
 
-export class HeatmapLayer extends Layer<unknown[]> {
-  data: unknown[] = [];
+export class HeatmapLayer extends Layer<HeatmapLayerOptions> {
+  options: HeatmapLayerOptions = { points: [] };
 
-  prepare(data: unknown[], _context: LayerContext): void {
-    this.data = data;
+  prepare(options: HeatmapLayerOptions, _context: LayerContext): void {
+    this.options = options;
   }
 
   render(_context: RenderContext): void {}

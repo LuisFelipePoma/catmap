@@ -21,8 +21,8 @@ package boundaries.
 - `@catmap/core`: charts, layers, renderer adapters, events, plugins, data contracts
 - `@catmap/data`: time series types, data source, min/max decimation, bucket aggregation
 - `@catmap/charts`: uPlot adapter and chart layers
-- `@catmap/geotech`: geotechnical APIs, starting with `PiezometerChart`
-- `@catmap/maps`: `InstrumentMap`, MapLibre adapter, map layers
+- `@catmap/geotech`: geotechnical APIs, charts, cross-sections, and borehole logs
+- `@catmap/maps`: `InstrumentMap`, MapLibre adapter, heatmaps, contours, map layers
 - `@catmap/react`: React wrappers for the geotech and map APIs
 - `apps/playground`: Vite playground with mock geotechnical data
 
@@ -70,10 +70,10 @@ import { InstrumentMap, PiezometerChart } from "@catmap/react";
 
 ### Fase 3
 
-- Advanced heatmaps
-- Contour layer
-- Cross-section view
-- Borehole log
+- Advanced heatmaps: implemented with native MapLibre heatmap layers
+- Contour layer: implemented for precalculated isolines
+- Cross-section view: implemented as framework-agnostic SVG
+- Borehole log: implemented as framework-agnostic SVG
 
 ### Fase 4
 

@@ -8,6 +8,15 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@catmap/core": ["packages/core/src/index.ts"],
+      "@catmap/data": ["packages/data/src/index.ts"],
+      "@catmap/charts": ["packages/charts/src/index.ts"],
+      "@catmap/geotech": ["packages/geotech/src/index.ts"],
+      "@catmap/maps": ["packages/maps/src/index.ts"],
+      "@catmap/react": ["packages/react/src/index.ts"]
+    },
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

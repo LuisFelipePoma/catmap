@@ -43,7 +43,11 @@ header {
 }
 
 .map-case {
-  max-width: 760px;
+  max-width: 900px;
+}
+
+.borehole-case {
+  max-width: 620px;
 }
 
 h1,

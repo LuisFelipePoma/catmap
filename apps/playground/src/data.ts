@@ -1,5 +1,8 @@
 import { createGeotechMonitoringMockData } from "@catmap/data";
 import type {
+  BoreholeInterval,
+  CrossSectionInstrument,
+  CrossSectionSeries,
   InclinometerCampaign,
   GeotechSeries,
   PiezometerInstrument,
@@ -10,7 +13,7 @@ import type {
   SettlementReading,
   TriggerLevel
 } from "@catmap/geotech";
-import type { GeoInstrument } from "@catmap/maps";
+import type { ContourLine, GeoInstrument, HeatmapPoint } from "@catmap/maps";
 
 const mock = createGeotechMonitoringMockData();
 
@@ -24,6 +27,11 @@ export const settlementThresholds: TriggerLevel[] = mock.settlementThresholds;
 export const comparisonSeries: GeotechSeries[] = mock.comparisonSeries;
 export const inclinometerCampaigns: InclinometerCampaign[] = mock.inclinometerCampaigns;
 export const sensorHealth: SensorHealthReading[] = mock.sensorHealth;
+export const heatmapPoints: HeatmapPoint[] = mock.heatmapPoints;
+export const contours: ContourLine[] = mock.contours;
+export const crossSectionSeries: CrossSectionSeries[] = mock.crossSectionSeries;
+export const crossSectionInstruments: CrossSectionInstrument[] = mock.crossSectionInstruments;
+export const boreholeIntervals: BoreholeInterval[] = mock.boreholeIntervals;
 export const largeTimeSeries = mock.largeTimeSeries;
 
 export const instruments: GeoInstrument[] = [

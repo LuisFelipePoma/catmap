@@ -1,3 +1,7 @@
+export * from "./borehole/BoreholeLog";
+export * from "./borehole/types";
+export * from "./cross-section/CrossSectionView";
+export * from "./cross-section/types";
 export * from "./health/SensorHealthChart";
 export * from "./health/types";
 export * from "./inclinometer/InclinometerProfile";

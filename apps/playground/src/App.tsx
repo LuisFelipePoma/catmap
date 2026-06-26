@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { decimateTimeSeries } from "@catmap/data";
 import {
+  BoreholeLog,
+  CrossSectionView,
   InclinometerProfile,
   InstrumentMap,
   MultiInstrumentChart,
@@ -12,7 +14,12 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import "uplot/dist/uPlot.min.css";
 import {
+  boreholeIntervals,
   comparisonSeries,
+  contours,
+  crossSectionInstruments,
+  crossSectionSeries,
+  heatmapPoints,
   inclinometerCampaigns,
   instruments,
   largeTimeSeries,
@@ -135,10 +142,37 @@ export function App() {
 
       <section className="case map-case">
         <div className="case-copy">
-          <h2>Instrument map</h2>
-          <p>Secondary context only; chart work remains the focus.</p>
+          <h2>Instrument map with heatmap and contours</h2>
+          <p>MapLibre heatmap points with precalculated contour isolines.</p>
         </div>
-        <InstrumentMap center={[-70.31, -27.44]} zoom={14} instruments={instruments} />
+        <InstrumentMap
+          center={[-70.31, -27.44]}
+          zoom={14}
+          instruments={instruments}
+          heatmap={{ points: heatmapPoints, radius: 34, opacity: 0.72 }}
+          contours={{ lines: contours, width: 2 }}
+        />
+      </section>
+
+      <section className="case">
+        <div className="case-copy">
+          <h2>Cross-section view</h2>
+          <p>Ground surface, piezometric level and instrument depths along section A.</p>
+        </div>
+        <CrossSectionView
+          title="Section A"
+          series={crossSectionSeries}
+          instruments={crossSectionInstruments}
+          height={340}
+        />
+      </section>
+
+      <section className="case borehole-case">
+        <div className="case-copy">
+          <h2>Borehole log</h2>
+          <p>Depth intervals with water level marker.</p>
+        </div>
+        <BoreholeLog boreholeId="BH-01" intervals={boreholeIntervals} waterLevel={10.5} width={520} height={420} />
       </section>
     </main>
   );
