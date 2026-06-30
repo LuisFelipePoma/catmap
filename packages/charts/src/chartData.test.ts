@@ -4,7 +4,9 @@ import {
   findNearestWaterfallPoint,
   normalizeWaterfallSpectra,
   normalizeWebGLPoints,
+  prepareWaterfallData,
   projectWaterfallSpectra,
+  selectWaterfallRenderer,
   SpectralWaterfallChart,
   toUPlotData,
   waterfallComparisonSeries,
@@ -99,6 +101,46 @@ describe("time series chart data", () => {
     ]);
   });
 
+  it("prepares typed waterfall data with finite ranges and NaN draw gaps", () => {
+    const data = prepareWaterfallData(
+      [
+        { id: "a", values: Float32Array.from([1, Number.NaN, 3, 4]) },
+        { id: "b", values: [2, 5] }
+      ],
+      [10, 20, 30, 40]
+    );
+
+    expect(data.maxPointCount).toBe(4);
+    expect(data.finitePointCount).toBe(5);
+    expect(data.xRange).toEqual({ min: 10, max: 40 });
+    expect(data.valueRange).toEqual(expect.objectContaining({ min: expect.any(Number), max: expect.any(Number) }));
+    expect(data.drawRanges).toEqual([
+      { spectrumIndex: 1, pointIndex: 0, count: 2 },
+      { spectrumIndex: 0, pointIndex: 2, count: 2 }
+    ]);
+  });
+
+  it("selects the waterfall renderer from mode, size, and WebGL2 support", () => {
+    expect(selectWaterfallRenderer("canvas", 1_000_000, true)).toBe("canvas");
+    expect(selectWaterfallRenderer("webgl2", 1_000_000, false)).toBe("canvas");
+    expect(selectWaterfallRenderer("auto", 99_999, true)).toBe("canvas");
+    expect(selectWaterfallRenderer("auto", 100_000, true)).toBe("webgl2");
+  });
+
+  it.skip("benchmarks a synthetic 500 x 10,000 waterfall data load", () => {
+    const x = Float32Array.from({ length: 10_000 }, (_item, index) => index);
+    const spectra = Array.from({ length: 500 }, (_item, spectrumIndex) => ({
+      id: `s-${spectrumIndex}`,
+      values: Float32Array.from(x, (value) => Math.sin(value / 20 + spectrumIndex / 8))
+    }));
+    const started = performance.now();
+    const data = prepareWaterfallData(spectra, x);
+    const preparedMs = performance.now() - started;
+
+    console.info({ preparedMs, vertices: data.finitePointCount, ranges: data.drawRanges.length });
+    expect(data.finitePointCount).toBe(5_000_000);
+  });
+
   it("projects and selects the nearest waterfall point", () => {
     const projection = projectWaterfallSpectra(
       {
@@ -114,6 +156,24 @@ describe("time series chart data", () => {
 
     expect(projection.points).toHaveLength(4);
     expect(findNearestWaterfallPoint(projection.points, target.x + 1, target.y + 1)?.spectrumId).toBe("b");
+  });
+
+  it("projects later spectra right and upward for the 2.5D waterfall", () => {
+    const projection = projectWaterfallSpectra(
+      {
+        spectra: [
+          { id: "front", values: [1] },
+          { id: "back", values: [1] }
+        ],
+        x: [0]
+      },
+      { left: 10, top: 20, width: 100, height: 80 }
+    );
+    const front = projection.points.find((point) => point.spectrumId === "front")!;
+    const back = projection.points.find((point) => point.spectrumId === "back")!;
+
+    expect(back.x - front.x).toBeGreaterThan(15);
+    expect(front.y - back.y).toBeGreaterThan(25);
   });
 
   it("updates spectral chart data", () => {
@@ -167,6 +227,24 @@ describe("time series chart data", () => {
     vi.unstubAllGlobals();
   });
 
+  it("drags the cross-section slice from the Drag me callout", () => {
+    const { chart, dispatch, spectra } = fakeChart();
+    const projection = projectWaterfallSpectra({ spectra, x: [0, 1, 2] }, waterfallArea);
+    const start = projection.points.find((point) => point.spectrumIndex === 0 && point.pointIndex === 1)!;
+    const end = projection.points.find((point) => point.spectrumIndex === 0 && point.pointIndex === 2)!;
+    const labelOffsetX = -9;
+    const labelY = start.y + 43;
+
+    dispatch("pointerdown", pointerEvent(start.x + labelOffsetX, labelY));
+    dispatch("pointermove", pointerEvent(end.x + labelOffsetX, labelY));
+    dispatch("pointerup", pointerEvent(end.x + labelOffsetX, labelY));
+
+    expect(chart.sliceIndex).toBe(2);
+    expect(chart.selection).toMatchObject({ spectrumId: "a", pointIndex: 2 });
+    chart.destroy();
+    vi.unstubAllGlobals();
+  });
+
   it("zooms and resets the waterfall viewport", () => {
     const onViewportChange = vi.fn();
     const { chart, dispatch } = fakeChart({ onViewportChange });
@@ -201,7 +279,7 @@ describe("time series chart data", () => {
   });
 });
 
-const waterfallArea = { left: 56, top: 34, width: 560, height: 276 };
+const waterfallArea = { left: 56, top: 34, width: 560, height: 295 };
 
 function fakeChart(options: Partial<SpectralWaterfallChartOptions> = {}) {
   const spectra = [

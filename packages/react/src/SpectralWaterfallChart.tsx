@@ -28,6 +28,7 @@ export function SpectralWaterfallChart({ className, style, ...options }: Spectra
     options.title,
     options.width,
     options.height,
+    options.renderer,
     options.background,
     options.lineColor,
     options.selectedColor,
