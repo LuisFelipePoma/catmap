@@ -1,3 +1,4 @@
+export * from "./SpectralWaterfallChart";
 export * from "./adapters/WebGLPointRenderer";
 export * from "./adapters/UPlotAdapter";
 export * from "./export/browserExport";

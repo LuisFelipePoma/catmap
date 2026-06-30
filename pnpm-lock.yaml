@@ -190,6 +190,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@catmap/charts':
+        specifier: workspace:*
+        version: link:../charts
       '@catmap/geotech':
         specifier: workspace:*
         version: link:../geotech
