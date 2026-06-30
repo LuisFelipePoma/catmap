@@ -42,6 +42,28 @@ header {
   gap: 4px;
 }
 
+.spectral-toolbar {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.spectral-toolbar button {
+  border: 1px solid #c8d1df;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #1f2937;
+  cursor: pointer;
+  font: inherit;
+  padding: 6px 10px;
+}
+
+.spectral-toolbar button.active {
+  background: #17243f;
+  border-color: #17243f;
+  color: #ffffff;
+}
+
 .map-case {
   max-width: 900px;
 }

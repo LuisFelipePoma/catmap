@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { decimateTimeSeries } from "@catmap/data";
 import {
   BoreholeLog,
@@ -20,6 +20,7 @@ import {
   contours,
   crossSectionInstruments,
   crossSectionSeries,
+  createSpectralPerformanceData,
   heatmapPoints,
   inclinometerCampaigns,
   instruments,
@@ -39,6 +40,15 @@ import "./style.css";
 
 export function App() {
   const [decimated, setDecimated] = useState(largeTimeSeries.slice(0, 600));
+  const [spectralMode, setSpectralMode] = useState<"demo" | "performance">("demo");
+  const spectralPerformance = useMemo(
+    () => (spectralMode === "performance" ? createSpectralPerformanceData() : null),
+    [spectralMode]
+  );
+  const activeSpectralX = spectralPerformance?.x ?? spectralX;
+  const activeSpectralSpectra = spectralPerformance?.spectra ?? spectralSpectra;
+  const activeSpectralVertexCount =
+    spectralPerformance?.vertexCount ?? spectralSpectra.reduce((sum, spectrum) => sum + spectrum.values.length, 0);
 
   useEffect(() => {
     void decimateTimeSeries(largeTimeSeries, { maxPoints: 600, useWorker: true }).then(setDecimated);
@@ -111,15 +121,35 @@ export function App() {
       <section className="case spectral-case">
         <div className="case-copy">
           <h2>Spectral waterfall</h2>
-          <p>Interactive 2.5D spectra with selected spectrum and cross-section slice.</p>
+          <p>
+            {activeSpectralSpectra.length.toLocaleString()} spectra, {activeSpectralVertexCount.toLocaleString()} vertices.
+          </p>
+          <div className="spectral-toolbar" role="group" aria-label="Spectral dataset">
+            <button
+              type="button"
+              className={spectralMode === "demo" ? "active" : ""}
+              onClick={() => setSpectralMode("demo")}
+            >
+              Demo
+            </button>
+            <button
+              type="button"
+              className={spectralMode === "performance" ? "active" : ""}
+              onClick={() => setSpectralMode("performance")}
+            >
+              Performance
+            </button>
+          </div>
         </div>
         <SpectralWaterfallChart
+          key={spectralMode}
           title="Interactive waterfall spectral chart"
-          x={spectralX}
-          spectra={spectralSpectra}
+          x={activeSpectralX}
+          spectra={activeSpectralSpectra}
           height={560}
+          renderer="auto"
           initialSelection={{ spectrumIndex: 0 }}
-          initialSliceIndex={214}
+          initialSliceIndex={spectralMode === "performance" ? 5_400 : 214}
         />
       </section>
 

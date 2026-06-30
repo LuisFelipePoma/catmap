@@ -124,6 +124,8 @@ interface Rect {
   height: number;
 }
 
+type WaterfallGeometry = ReturnType<typeof waterfallGeometry>;
+
 const baseLineColor = "#55c7f7";
 const hoverLineColor = "#f8fafc";
 const waterfallSelectedLineColor = "#f8fafc";
@@ -140,6 +142,8 @@ export class SpectralWaterfallChart {
   private options: SpectralWaterfallChartOptions;
   private data: PreparedWaterfallData;
   private webglRenderer: WebGL2WaterfallRenderer | null = null;
+  private baseWaterfallImage: HTMLCanvasElement | null = null;
+  private baseWaterfallKey = "";
   private selectedSpectrumIndex: number | null;
   private hoverSpectrumIndex: number | null = null;
   private slicePointIndex: number;
@@ -148,6 +152,9 @@ export class SpectralWaterfallChart {
   private draggingSliceOffsetX = 0;
   private panningViewport: ViewportPan | null = null;
   private suppressClick = false;
+  private lastHoverProbe: { xBucket: number; yBucket: number; spectrumIndex: number | null } | null = null;
+  private pendingHoverPosition: { x: number; y: number; area: WaterfallPlotArea } | null = null;
+  private hoverAnimationFrame = 0;
   private width = 0;
   private height = 0;
 
@@ -237,6 +244,8 @@ export class SpectralWaterfallChart {
     this.canvas.width = Math.round(width * pixelRatio);
     this.canvas.height = Math.round(height * pixelRatio);
     this.context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    this.baseWaterfallKey = "";
+    this.lastHoverProbe = null;
     this.render();
   }
 
@@ -258,31 +267,66 @@ export class SpectralWaterfallChart {
     const position = pointerPosition(this.canvas, event);
 
     if (this.draggingSlice) {
+      this.cancelQueuedHover();
       this.updateSliceFromPosition(position.x - this.draggingSliceOffsetX, layout.waterfall);
       return;
     }
 
     if (this.panningViewport) {
+      this.cancelQueuedHover();
       this.panViewport(position.x, layout.waterfall);
       return;
     }
 
-    const point = this.pickPoint(position.x, position.y, layout.waterfall);
-    this.hoverSpectrumIndex = point?.spectrumIndex ?? null;
+    this.queueHoverUpdate(position.x, position.y, layout.waterfall);
+  };
+
+  private queueHoverUpdate(x: number, y: number, area: WaterfallPlotArea): void {
+    this.pendingHoverPosition = { x, y, area };
+    if (this.hoverAnimationFrame !== 0) return;
+
+    if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+      this.flushHoverUpdate();
+      return;
+    }
+
+    this.hoverAnimationFrame = window.requestAnimationFrame(() => {
+      this.hoverAnimationFrame = 0;
+      this.flushHoverUpdate();
+    });
+  }
+
+  private flushHoverUpdate(): void {
+    const pending = this.pendingHoverPosition;
+    this.pendingHoverPosition = null;
+    if (!pending) return;
+
+    const position = { x: pending.x, y: pending.y };
+    const nextHover = this.hoverAtPosition(position.x, position.y, pending.area);
     this.canvas.style.cursor =
-      this.sliceHandleDragOffset(position, layout.waterfall) !== null
+      this.sliceHandleDragOffset(position, pending.area) !== null
         ? "ew-resize"
-        : point
+        : nextHover !== null
           ? "crosshair"
-          : isInArea(position, layout.waterfall)
+          : isInArea(position, pending.area)
             ? "grab"
             : "default";
+    if (nextHover === this.hoverSpectrumIndex) return;
+    this.hoverSpectrumIndex = nextHover;
     this.render();
-  };
+  }
+
+  private cancelQueuedHover(): void {
+    this.pendingHoverPosition = null;
+    if (this.hoverAnimationFrame === 0) return;
+    window.cancelAnimationFrame?.(this.hoverAnimationFrame);
+    this.hoverAnimationFrame = 0;
+  }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
     const layout = chartLayout(this.width, this.height);
     const position = pointerPosition(this.canvas, event);
+    this.cancelQueuedHover();
     const sliceOffset = this.sliceHandleDragOffset(position, layout.waterfall);
     if (sliceOffset === null && !isInArea(position, layout.waterfall)) return;
 
@@ -312,7 +356,9 @@ export class SpectralWaterfallChart {
   };
 
   private readonly handlePointerLeave = (): void => {
+    this.cancelQueuedHover();
     if (this.draggingSlice || this.panningViewport) return;
+    if (this.hoverSpectrumIndex === null) return;
     this.hoverSpectrumIndex = null;
     this.canvas.style.cursor = "default";
     this.render();
@@ -348,6 +394,22 @@ export class SpectralWaterfallChart {
 
   private pickPoint(x: number, y: number, area: WaterfallPlotArea): ProjectedWaterfallPoint | null {
     return findNearestWaterfallDataPoint(this.data, area, this.viewportRange, x, y, 20);
+  }
+
+  private hoverAtPosition(x: number, y: number, area: WaterfallPlotArea): number | null {
+    if (!isInArea({ x, y }, area)) {
+      this.lastHoverProbe = null;
+      return null;
+    }
+    const xBucket = Math.floor(x / 4);
+    const yBucket = Math.floor(y / 4);
+    if (this.lastHoverProbe?.xBucket === xBucket && this.lastHoverProbe.yBucket === yBucket) {
+      return this.lastHoverProbe.spectrumIndex;
+    }
+
+    const spectrumIndex = this.pickPoint(x, y, area)?.spectrumIndex ?? null;
+    this.lastHoverProbe = { xBucket, yBucket, spectrumIndex };
+    return spectrumIndex;
   }
 
   private setSelectedSpectrum(spectrumIndex: number): void {
@@ -407,6 +469,8 @@ export class SpectralWaterfallChart {
     const next = normalizeViewportRange(rangeValue, this.data.xRange);
     if (sameRange(next, this.viewportRange)) return;
     this.viewportRange = next;
+    this.baseWaterfallKey = "";
+    this.lastHoverProbe = null;
     this.options.onViewportChange?.(next ? { ...next } : null);
     this.render();
   }
@@ -420,12 +484,16 @@ export class SpectralWaterfallChart {
   }
 
   private sliceHandlePoint(area: WaterfallPlotArea): ProjectedWaterfallPoint | null {
-    const projection = projectWaterfallData(this.data, area, this.viewportRange);
-    const selected =
-      this.selection && pointForSelection(projection.points, this.selection);
-    if (selected) return selected;
+    const xRange = normalizeViewportRange(this.viewportRange, this.data.xRange) ?? this.data.xRange;
+    const valueRange = this.data.valueRange;
+    if (!xRange || !valueRange) return null;
 
-    const slicePoints = projection.points.filter((point) => point.pointIndex === this.slicePointIndex);
+    const selected = this.selection;
+    if (selected) {
+      return projectPreparedPoint(this.data, selected.spectrumIndex, selected.pointIndex, area, xRange, valueRange);
+    }
+
+    const slicePoints = projectSlicePoints(this.data, this.slicePointIndex, area, this.viewportRange);
     return slicePoints[Math.floor(slicePoints.length / 2)] ?? null;
   }
 
@@ -492,6 +560,9 @@ export class SpectralWaterfallChart {
 
   private resetData(): void {
     this.data = prepareWaterfallData(this.options.spectra, this.options.x);
+    this.baseWaterfallKey = "";
+    this.baseWaterfallImage = null;
+    this.lastHoverProbe = null;
     this.webglRenderer?.setData(this.data);
   }
 
@@ -506,7 +577,7 @@ export class SpectralWaterfallChart {
     drawWaterfallGrid(this.context, area, projection);
 
     if (renderer === "webgl2" && this.drawWebGLWaterfall(area)) {
-      drawWaterfallInteractionOverlay(this.context, this.data, this.options, area, selected, hover, this.slicePointIndex, this.viewportRange, true);
+      drawWaterfallInteractionOverlay(this.context, this.data, this.options, area, selected, hover, this.slicePointIndex, this.viewportRange, false);
       return;
     }
 
@@ -537,6 +608,12 @@ export class SpectralWaterfallChart {
 
   private drawWebGLWaterfall(area: WaterfallPlotArea): boolean {
     if (!this.webglRenderer?.ready) return false;
+    const key = waterfallBaseRenderKey(area, this.width, this.height, this.viewportRange, this.data, this.options.lineColor ?? baseLineColor);
+    if (this.baseWaterfallImage && this.baseWaterfallKey === key) {
+      this.context?.drawImage(this.baseWaterfallImage, 0, 0, this.width, this.height);
+      return true;
+    }
+
     const source = this.webglRenderer.render({
       area,
       width: this.width,
@@ -547,13 +624,31 @@ export class SpectralWaterfallChart {
       color: this.options.lineColor ?? baseLineColor
     });
     if (!source) return false;
-    this.context?.drawImage(source, 0, 0, this.width, this.height);
+    const snapshot = this.snapshotWaterfallImage(source);
+    if (!snapshot) return false;
+    this.baseWaterfallImage = snapshot;
+    this.baseWaterfallKey = key;
+    this.context?.drawImage(snapshot, 0, 0, this.width, this.height);
     return true;
   }
 
+  private snapshotWaterfallImage(source: HTMLCanvasElement): HTMLCanvasElement | null {
+    const pixelRatio = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+    const snapshot = document.createElement("canvas");
+    snapshot.width = Math.max(1, Math.round(this.width * pixelRatio));
+    snapshot.height = Math.max(1, Math.round(this.height * pixelRatio));
+    const context = snapshot.getContext("2d");
+    if (!context) return null;
+    context.drawImage(source, 0, 0, snapshot.width, snapshot.height);
+    return snapshot;
+  }
+
   private resetWebGLRenderer(): void {
+    this.cancelQueuedHover();
     this.webglRenderer?.destroy();
     this.webglRenderer = null;
+    this.baseWaterfallImage = null;
+    this.baseWaterfallKey = "";
   }
 }
 
@@ -662,11 +757,12 @@ export function projectWaterfallData(
   if (!xRange || !valueRange) return { points: [], xRange, valueRange };
 
   const points: ProjectedWaterfallPoint[] = [];
+  const geometry = waterfallGeometry(area);
   data.values.forEach((values, spectrumIndex) => {
     for (let pointIndex = 0; pointIndex < values.length; pointIndex += 1) {
       const xRaw = data.x[pointIndex];
       if (!isFiniteNumber(xRaw) || xRaw < xRange.min || xRaw > xRange.max) continue;
-      const point = projectPreparedPoint(data, spectrumIndex, pointIndex, area, xRange, valueRange);
+      const point = projectPreparedPoint(data, spectrumIndex, pointIndex, area, xRange, valueRange, geometry);
       if (point) points.push(point);
     }
   });
@@ -699,14 +795,14 @@ function projectPreparedPoint(
   pointIndex: number,
   area: WaterfallPlotArea,
   xRange: WaterfallRange,
-  valueRange: WaterfallRange
+  valueRange: WaterfallRange,
+  geometry: WaterfallGeometry = waterfallGeometry(area)
 ): ProjectedWaterfallPoint | null {
   const values = data.values[spectrumIndex];
   const value = values?.[pointIndex];
   const xRaw = data.x[pointIndex];
   if (!isFiniteNumber(value) || !isFiniteNumber(xRaw)) return null;
 
-  const geometry = waterfallGeometry(area);
   const spectrumSpan = Math.max(data.spectrumCount - 1, 1);
   const depth = spectrumIndex / spectrumSpan;
   const xSpan = xRange.max - xRange.min || 1;
@@ -740,10 +836,11 @@ function projectSpectrumPoints(
   if (!xRange || !valueRange || !values) return [];
 
   const points: ProjectedWaterfallPoint[] = [];
+  const geometry = waterfallGeometry(area);
   for (let pointIndex = 0; pointIndex < values.length; pointIndex += 1) {
     const xRaw = data.x[pointIndex];
     if (!isFiniteNumber(xRaw) || xRaw < xRange.min || xRaw > xRange.max) continue;
-    const point = projectPreparedPoint(data, spectrumIndex, pointIndex, area, xRange, valueRange);
+    const point = projectPreparedPoint(data, spectrumIndex, pointIndex, area, xRange, valueRange, geometry);
     if (point) points.push(point);
   }
   return points;
@@ -760,8 +857,9 @@ function projectSlicePoints(
   if (!xRange || !valueRange) return [];
 
   const points: ProjectedWaterfallPoint[] = [];
+  const geometry = waterfallGeometry(area);
   for (let spectrumIndex = 0; spectrumIndex < data.spectrumCount; spectrumIndex += 1) {
-    const point = projectPreparedPoint(data, spectrumIndex, sliceIndex, area, xRange, valueRange);
+    const point = projectPreparedPoint(data, spectrumIndex, sliceIndex, area, xRange, valueRange, geometry);
     if (point) points.push(point);
   }
   return points;
@@ -789,7 +887,7 @@ function findNearestWaterfallDataPoint(
     const ratio = clamp((x - area.left - geometry.xPad - depth * geometry.depthX) / Math.max(geometry.plotWidth, 1), 0, 1);
     const pointIndex = nearestPreparedPointIndex(data, xRange.min + (xRange.max - xRange.min) * ratio);
     for (let offset = -2; offset <= 2; offset += 1) {
-      const point = projectPreparedPoint(data, spectrumIndex, pointIndex + offset, area, xRange, valueRange);
+      const point = projectPreparedPoint(data, spectrumIndex, pointIndex + offset, area, xRange, valueRange, geometry);
       if (!point) continue;
       const distance = (point.x - x) ** 2 + (point.y - y) ** 2;
       if (distance <= nearestDistance) {
@@ -889,7 +987,7 @@ function waterfallComparisonSeriesFromData(
       label: data.labels[selected.spectrumIndex] ?? data.ids[selected.spectrumIndex] ?? "",
       color: options.selectedColor ?? selectedLineColor,
       kind: "selected",
-      points: decimateSeriesPoints(pointsForPreparedSpectrum(data, selected.spectrumIndex, viewport), maxPoints)
+      points: decimatedPointsForPreparedSpectrum(data, selected.spectrumIndex, viewport, maxPoints)
     });
   }
 
@@ -899,11 +997,94 @@ function waterfallComparisonSeriesFromData(
       label: data.labels[hover.spectrumIndex] ?? data.ids[hover.spectrumIndex] ?? "",
       color: options.sliceColor ?? sliceLineColor,
       kind: "hover",
-      points: decimateSeriesPoints(pointsForPreparedSpectrum(data, hover.spectrumIndex, viewport), maxPoints)
+      points: decimatedPointsForPreparedSpectrum(data, hover.spectrumIndex, viewport, maxPoints)
     });
   }
 
   return series.filter((item) => item.points.length > 0);
+}
+
+function decimatedPointsForPreparedSpectrum(
+  data: PreparedWaterfallData,
+  spectrumIndex: number,
+  viewport: WaterfallRange | null,
+  maxPoints: number
+): WaterfallSeriesPoint[] {
+  const values = data.values[spectrumIndex];
+  if (!values || maxPoints <= 0) return [];
+
+  let visibleCount = 0;
+  for (let pointIndex = 0; pointIndex < values.length; pointIndex += 1) {
+    const xRaw = data.x[pointIndex];
+    const value = values[pointIndex];
+    if (!isFiniteNumber(xRaw) || !isFiniteNumber(value)) continue;
+    if (viewport && (xRaw < viewport.min || xRaw > viewport.max)) continue;
+    visibleCount += 1;
+  }
+
+  if (visibleCount <= maxPoints) return pointsForPreparedSpectrum(data, spectrumIndex, viewport);
+
+  const bucketCount = Math.max(1, Math.floor(maxPoints / 2));
+  const bucketSize = Math.ceil(visibleCount / bucketCount);
+  const output: WaterfallSeriesPoint[] = [];
+  let visibleIndex = 0;
+  let bucketEnd = bucketSize;
+  let minIndex = -1;
+  let maxIndex = -1;
+  let minX = 0;
+  let maxX = 0;
+  let minValue = Infinity;
+  let maxValue = -Infinity;
+
+  const flushBucket = () => {
+    if (minIndex < 0 || maxIndex < 0) return;
+    const pair =
+      minX <= maxX
+        ? [
+            { index: minIndex, x: minX, value: minValue },
+            { index: maxIndex, x: maxX, value: maxValue }
+          ]
+        : [
+            { index: maxIndex, x: maxX, value: maxValue },
+            { index: minIndex, x: minX, value: minValue }
+          ];
+    for (const point of pair) {
+      const last = output[output.length - 1];
+      if (last?.pointIndex === point.index || output.length >= maxPoints) continue;
+      output.push({ pointIndex: point.index, spectrumIndex, xValue: point.x, value: point.value });
+    }
+    minIndex = -1;
+    maxIndex = -1;
+    minValue = Infinity;
+    maxValue = -Infinity;
+  };
+
+  for (let pointIndex = 0; pointIndex < values.length; pointIndex += 1) {
+    const xRaw = data.x[pointIndex];
+    const value = values[pointIndex];
+    if (!isFiniteNumber(xRaw) || !isFiniteNumber(value)) continue;
+    if (viewport && (xRaw < viewport.min || xRaw > viewport.max)) continue;
+
+    if (visibleIndex >= bucketEnd) {
+      flushBucket();
+      bucketEnd += bucketSize;
+    }
+
+    if (value < minValue) {
+      minValue = value;
+      minIndex = pointIndex;
+      minX = xRaw;
+    }
+    if (value > maxValue) {
+      maxValue = value;
+      maxIndex = pointIndex;
+      maxX = xRaw;
+    }
+    visibleIndex += 1;
+  }
+
+  flushBucket();
+  return output;
 }
 
 function pointsForPreparedSpectrum(
@@ -978,7 +1159,7 @@ function drawWaterfallInteractionOverlay(
   const selectedPoint = selected && projectPreparedPoint(data, selected.spectrumIndex, selected.pointIndex, area, xRange, valueRange);
   const hoverPoint = hover && projectPreparedPoint(data, hover.spectrumIndex, hover.pointIndex, area, xRange, valueRange);
   const slicePoints = projectSlicePoints(data, sliceIndex, area, viewport);
-  drawSliceBand(context, slicePoints, sliceIndex);
+  drawSliceBand(context, slicePoints);
   if (selectedPoint) drawMarker(context, selectedPoint.x, selectedPoint.y, options.selectedColor ?? selectedLineColor, 5);
   if (hoverPoint && !sameSelection(hover, selected)) drawMarker(context, hoverPoint.x, hoverPoint.y, "#ffffff", 4);
   drawSliceHandle(context, selectedPoint ?? middleSlicePoint(slicePoints, sliceIndex), options.selectedColor ?? selectedLineColor);
@@ -1206,14 +1387,8 @@ function drawMarker(context: CanvasRenderingContext2D, x: number, y: number, col
   context.restore();
 }
 
-function drawSliceBand(
-  context: CanvasRenderingContext2D,
-  points: readonly ProjectedWaterfallPoint[],
-  sliceIndex: number
-): void {
-  const slicePoints = points
-    .filter((point) => point.pointIndex === sliceIndex)
-    .sort((a, b) => a.spectrumIndex - b.spectrumIndex);
+function drawSliceBand(context: CanvasRenderingContext2D, points: readonly ProjectedWaterfallPoint[]): void {
+  const slicePoints = points;
   if (slicePoints.length < 2) return;
 
   context.save();
@@ -1329,6 +1504,29 @@ function drawViewportStrip(context: CanvasRenderingContext2D, area: WaterfallPlo
   context.fillStyle = "rgba(255, 255, 255, 0.12)";
   context.fillRect(area.left, area.top + area.height + 6, area.width, 4);
   context.restore();
+}
+
+function waterfallBaseRenderKey(
+  area: WaterfallPlotArea,
+  width: number,
+  height: number,
+  viewport: WaterfallRange | null,
+  data: PreparedWaterfallData,
+  color: string
+): string {
+  const rangeValue = normalizeViewportRange(viewport, data.xRange);
+  return [
+    width,
+    height,
+    area.left,
+    area.top,
+    area.width,
+    area.height,
+    rangeValue?.min ?? "",
+    rangeValue?.max ?? "",
+    data.finitePointCount,
+    color
+  ].join(":");
 }
 
 interface WebGLWaterfallRenderOptions {
