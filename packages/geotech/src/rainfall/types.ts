@@ -1,3 +1,4 @@
+import type { ChartToolsOptions } from "@catmap/charts";
 import type { PiezometerReading, TriggerLevel } from "../piezometer/types";
 
 export interface RainfallReading {
@@ -14,4 +15,5 @@ export interface RainfallResponseChartOptions {
   showThresholds?: boolean;
   maxPoints?: number;
   height?: number;
+  tools?: ChartToolsOptions;
 }

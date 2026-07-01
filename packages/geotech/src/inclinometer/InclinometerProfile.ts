@@ -36,6 +36,7 @@ function toInclinometerSpec(options: InclinometerProfileOptions): TimeSeriesChar
     invertY: true,
     height: options.height ?? 360,
     maxPoints: options.maxPoints,
+    tools: options.tools,
     thresholds: options.thresholds,
     series: options.campaigns.map((campaign, index) => ({
       id: campaign.id,

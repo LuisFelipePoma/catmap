@@ -12,9 +12,7 @@
   "dependencies": {
     "@catmap/data": "workspace:*",
     "@catmap/geotech": "workspace:*",
-    "@catmap/maps": "workspace:*",
     "@catmap/react": "workspace:*",
-    "maplibre-gl": "^5.24.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "uplot": "^1.6.32"

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TimeSeriesChartAdapter, TimeSeriesChartSpec } from "@catmap/charts";
 import {
   BoreholeLog,
@@ -29,6 +29,24 @@ describe("geotech charts", () => {
     expect(adapter.initCount).toBe(1);
     expect(adapter.updateCount).toBe(1);
     expect(adapter.lastSpec?.series[0]?.data).toHaveLength(2);
+  });
+
+  it("passes chart tools into the time-series spec", () => {
+    const adapter = new FakeAdapter();
+    const tools = { onInspect: vi.fn() };
+    const chart = new PiezometerChart(
+      {} as HTMLElement,
+      {
+        instrument: { id: "PZ-001" },
+        readings: [{ timestamp: 1, waterLevel: 10 }],
+        tools
+      },
+      adapter
+    );
+
+    chart.updateData([{ timestamp: 1, waterLevel: 10 }]);
+
+    expect(adapter.lastSpec?.tools).toBe(tools);
   });
 
   it("creates missing markers only for missing piezometer readings", () => {
@@ -183,5 +201,6 @@ class FakeAdapter implements TimeSeriesChartAdapter {
 
   render(): void {}
   resize(): void {}
+  resetViewport(): void {}
   destroy(): void {}
 }

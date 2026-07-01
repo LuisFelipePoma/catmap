@@ -9,10 +9,104 @@ import {
   selectWaterfallRenderer,
   SpectralWaterfallChart,
   toUPlotData,
+  UPlotAdapter,
   waterfallComparisonSeries,
   type SpectralWaterfallChartOptions,
   type TimeSeriesChartSpec
 } from "./index";
+
+interface FakeUPlotInstance {
+  cursor: { idx: number | null };
+  data: unknown[][];
+  hooks: {
+    setCursor?: Array<(chart: FakeUPlotInstance) => void>;
+    setScale?: Array<(chart: FakeUPlotInstance, scaleKey: string) => void>;
+  };
+  over: {
+    addEventListener: ReturnType<typeof vi.fn>;
+    removeEventListener: ReturnType<typeof vi.fn>;
+    getBoundingClientRect: () => { left: number; top: number; width: number; height: number };
+  };
+  scales: Record<string, { min?: number; max?: number }>;
+  width: number;
+  dispatch: (type: string, event: unknown) => void;
+  setCursor: (options: { left: number; top: number }) => void;
+}
+
+const uPlotMock = vi.hoisted(() => ({ instances: [] as FakeUPlotInstance[] }));
+
+vi.mock("uplot", () => {
+  class FakeUPlot {
+    static paths = { bars: () => undefined };
+
+    cursor = { idx: null as number | null };
+    hooks: FakeUPlotInstance["hooks"];
+    over: FakeUPlotInstance["over"];
+    scales: FakeUPlotInstance["scales"];
+    width: number;
+    height: number;
+    data: unknown[][];
+    private listeners = new Map<string, Array<(event: unknown) => void>>();
+
+    constructor(
+      public opts: { width: number; height: number; hooks?: FakeUPlotInstance["hooks"] },
+      data: unknown[][]
+    ) {
+      this.width = opts.width;
+      this.height = opts.height;
+      this.data = data;
+      this.hooks = opts.hooks ?? {};
+      this.scales = { x: { min: data[0]?.[0] as number, max: data[0]?.at(-1) as number }, y: {} };
+      this.over = {
+        addEventListener: vi.fn((type: string, handler: (event: unknown) => void) => {
+          this.listeners.set(type, [...(this.listeners.get(type) ?? []), handler]);
+        }),
+        removeEventListener: vi.fn((type: string, handler: (event: unknown) => void) => {
+          this.listeners.set(
+            type,
+            (this.listeners.get(type) ?? []).filter((item) => item !== handler)
+          );
+        }),
+        getBoundingClientRect: () => ({ left: 0, top: 0, width: this.width, height: this.height })
+      };
+      uPlotMock.instances.push(this as unknown as FakeUPlotInstance);
+    }
+
+    setData(data: unknown[][]): void {
+      this.data = data;
+    }
+
+    setScale(scaleKey: string, limits: { min: number; max: number }): void {
+      this.scales[scaleKey] = { ...this.scales[scaleKey], ...limits };
+      this.hooks.setScale?.forEach((hook) => hook(this as unknown as FakeUPlotInstance, scaleKey));
+    }
+
+    setCursor(_options: { left: number; top: number }): void {
+      this.hooks.setCursor?.forEach((hook) => hook(this as unknown as FakeUPlotInstance));
+    }
+
+    posToVal(left: number): number {
+      const scale = this.scales.x;
+      const min = scale?.min ?? 0;
+      const max = scale?.max ?? 1;
+      return min + (left / Math.max(this.width, 1)) * (max - min);
+    }
+
+    setSize(options: { width: number; height: number }): void {
+      this.width = options.width;
+      this.height = options.height;
+    }
+
+    redraw(): void {}
+    destroy(): void {}
+
+    dispatch(type: string, event: unknown): void {
+      for (const handler of this.listeners.get(type) ?? []) handler(event);
+    }
+  }
+
+  return { default: FakeUPlot };
+});
 
 describe("time series chart data", () => {
   it("decimates without exceeding maxPoints", () => {
@@ -69,6 +163,119 @@ describe("time series chart data", () => {
     };
 
     expect(toUPlotData(spec, 10)[2]).toEqual([null, 10, null]);
+  });
+
+  it("emits inspected time-series points", () => {
+    const onInspect = vi.fn();
+    const adapter = new UPlotAdapter({
+      tools: { onInspect },
+      series: [
+        {
+          id: "water-level",
+          label: "Water level",
+          color: "#2563eb",
+          data: [
+            { timestamp: 1000, value: 10 },
+            { timestamp: 2000, value: 11 }
+          ]
+        }
+      ]
+    });
+    adapter.init(fakeContainer());
+    const plot = uPlotMock.instances.at(-1)!;
+
+    plot.cursor.idx = 1;
+    plot.setCursor({ left: 1, top: 1 });
+
+    expect(onInspect).toHaveBeenCalledWith({
+      index: 1,
+      x: 2000,
+      series: [{ id: "water-level", label: "Water level", color: "#2563eb", value: 11 }]
+    });
+    adapter.destroy();
+  });
+
+  it("emits viewport changes from wheel zoom", () => {
+    const onViewportChange = vi.fn();
+    const preventDefault = vi.fn();
+    const adapter = new UPlotAdapter({
+      tools: { onViewportChange },
+      series: [
+        {
+          id: "water-level",
+          label: "Water level",
+          color: "#2563eb",
+          data: [
+            { timestamp: 1000, value: 10 },
+            { timestamp: 2000, value: 11 },
+            { timestamp: 3000, value: 12 }
+          ]
+        }
+      ]
+    });
+    adapter.init(fakeContainer());
+    const plot = uPlotMock.instances.at(-1)!;
+
+    plot.dispatch("wheel", { clientX: 160, deltaX: 0, deltaY: -100, shiftKey: false, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(onViewportChange).toHaveBeenCalledWith({ min: 1100, max: 2700 });
+    adapter.destroy();
+  });
+
+  it("pans a zoomed viewport with shift wheel by default", () => {
+    const preventDefault = vi.fn();
+    const adapter = new UPlotAdapter({
+      series: [
+        {
+          id: "water-level",
+          label: "Water level",
+          color: "#2563eb",
+          data: [
+            { timestamp: 1000, value: 10 },
+            { timestamp: 2000, value: 11 },
+            { timestamp: 3000, value: 12 }
+          ]
+        }
+      ]
+    });
+    adapter.init(fakeContainer());
+    const plot = uPlotMock.instances.at(-1)!;
+    plot.scales.x = { min: 1.2, max: 2.4 };
+
+    plot.dispatch("wheel", { clientX: 160, deltaX: 0, deltaY: 100, shiftKey: true, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(plot.scales.x).toEqual({ min: 1.3875, max: 2.5875 });
+    adapter.destroy();
+  });
+
+  it("resets the viewport to the full x range", () => {
+    const onViewportChange = vi.fn();
+    const adapter = new UPlotAdapter({
+      tools: { onViewportChange },
+      series: [
+        {
+          id: "water-level",
+          label: "Water level",
+          color: "#2563eb",
+          data: [
+            { timestamp: 1000, value: 10 },
+            { timestamp: 2000, value: 11 },
+            { timestamp: 3000, value: 12 }
+          ]
+        }
+      ]
+    });
+    adapter.init(fakeContainer());
+    const plot = uPlotMock.instances.at(-1)!;
+    plot.scales.x = { min: 1.2, max: 2.4 };
+
+    adapter.resetViewport();
+
+    expect(plot.scales.x).toEqual({ min: 1, max: 3 });
+    expect(onViewportChange).toHaveBeenCalledWith(null);
+    adapter.destroy();
   });
 
   it("normalizes finite points for WebGL clip space", () => {

@@ -19,8 +19,7 @@
   },
   "dependencies": {
     "@catmap/charts": "workspace:*",
-    "@catmap/geotech": "workspace:*",
-    "@catmap/maps": "workspace:*"
+    "@catmap/geotech": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18"

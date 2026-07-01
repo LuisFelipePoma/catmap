@@ -22,7 +22,7 @@ export function InclinometerProfile({ className, style, ...options }: Inclinomet
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.instrument, options.campaigns, options.axis, options.thresholds]);
+  }, [options.instrument, options.campaigns, options.axis, options.thresholds, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 360, ...style }} />;
 }

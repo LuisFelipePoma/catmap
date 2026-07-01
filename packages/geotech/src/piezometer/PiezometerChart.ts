@@ -29,6 +29,7 @@ function toPiezometerSpec(options: PiezometerChartOptions): TimeSeriesChartSpec 
     yLabel: labelForAxis(yAxis),
     height: options.height,
     maxPoints: options.maxPoints,
+    tools: options.tools,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
     markers:

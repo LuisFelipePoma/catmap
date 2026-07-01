@@ -33,6 +33,7 @@ function toRainfallResponseSpec(options: RainfallResponseChartOptions): TimeSeri
     yLabel: responseAxis === "waterLevel" ? "Water level" : "Pore pressure",
     height: options.height,
     maxPoints: options.maxPoints,
+    tools: options.tools,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
     markers: missingMarkers(options.readings, {

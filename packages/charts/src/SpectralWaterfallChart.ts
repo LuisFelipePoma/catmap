@@ -1284,30 +1284,6 @@ function pointsForSpectrum(
   return points;
 }
 
-function decimateSeriesPoints(points: WaterfallSeriesPoint[], maxPoints: number): WaterfallSeriesPoint[] {
-  if (points.length <= maxPoints || maxPoints <= 0) return points;
-  const bucketCount = Math.max(1, Math.floor(maxPoints / 2));
-  const bucketSize = Math.ceil(points.length / bucketCount);
-  const output: WaterfallSeriesPoint[] = [];
-
-  for (let start = 0; start < points.length && output.length < maxPoints; start += bucketSize) {
-    let min = points[start]!;
-    let max = points[start]!;
-    const end = Math.min(points.length, start + bucketSize);
-    for (let index = start + 1; index < end; index += 1) {
-      const point = points[index]!;
-      if (point.value < min.value) min = point;
-      if (point.value > max.value) max = point;
-    }
-    const pair = min.xValue <= max.xValue ? [min, max] : [max, min];
-    for (const point of pair) {
-      if (output.at(-1) !== point && output.length < maxPoints) output.push(point);
-    }
-  }
-
-  return output;
-}
-
 function drawGrid(context: CanvasRenderingContext2D, area: WaterfallPlotArea, title: string, yLabel: string): void {
   context.save();
   context.strokeStyle = "rgba(125, 211, 252, 0.13)";
@@ -1716,17 +1692,6 @@ function middleSlicePoint(
 ): ProjectedWaterfallPoint | null {
   const slicePoints = points.filter((point) => point.pointIndex === sliceIndex);
   return slicePoints[Math.floor(slicePoints.length / 2)] ?? null;
-}
-
-function pointForSelection(
-  points: readonly ProjectedWaterfallPoint[],
-  selection: WaterfallPointSelection
-): ProjectedWaterfallPoint | null {
-  return (
-    points.find(
-      (point) => point.spectrumIndex === selection.spectrumIndex && point.pointIndex === selection.pointIndex
-    ) ?? null
-  );
 }
 
 function nearestPreparedPointIndex(data: PreparedWaterfallData, target: number): number {

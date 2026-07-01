@@ -8,7 +8,7 @@ This document tracks what has been implemented in `catmap`, what was deliberatel
 
 - Core package contracts and package boundaries
 - Geotechnical charts and React wrappers
-- MapLibre instrument maps with heatmaps and contours
+- Chart analysis tools for inspection, viewport zooming, panning, and reset callbacks
 - Cross-section and borehole SVG views
 - Arrow-compatible column loading
 - WebGL point rendering with OffscreenCanvas support
@@ -24,7 +24,7 @@ Completed:
 - Monorepo with `packages/*` and `apps/*`.
 - Framework-agnostic `@catmap/core` contracts for charts, layers, renderers, events, plugins, and data sources.
 - `@catmap/data` time-series types, in-memory data source, min/max decimation, and bucket aggregation.
-- Initial `PiezometerChart` and `InstrumentMap`.
+- Initial `PiezometerChart`.
 - React wrappers in `@catmap/react`.
 - Vite playground with mock geotechnical data.
 - Baseline Vitest coverage.
@@ -44,12 +44,10 @@ Deliberate simplification:
 
 - Worker decimation currently falls back to the same TypeScript algorithm path. Add a real worker only when main-thread decimation becomes a measured bottleneck.
 
-### Phase 3: Geotechnical Views And Advanced Maps
+### Phase 3: Geotechnical Views
 
 Completed:
 
-- Native MapLibre heatmap support from `{ longitude, latitude, value }` points.
-- Precalculated contour isolines rendered as MapLibre line layers.
 - `CrossSectionView` as framework-agnostic SVG.
 - `BoreholeLog` as framework-agnostic SVG.
 - React wrappers for cross-sections and borehole logs.
@@ -57,7 +55,6 @@ Completed:
 
 Deliberate simplification:
 
-- Contours are not generated in the browser. Consumers pass isolines that were calculated upstream.
 - Cross-sections and borehole logs use SVG string rendering instead of a new rendering framework.
 
 ### Phase 4: Data And Export Hardening
@@ -96,7 +93,6 @@ Deliberate simplification:
 - `@catmap/core`: shared contracts only. No React, MapLibre, uPlot, browser file parsers, or renderer-specific code.
 - `@catmap/data`: data structures, mock data, aggregation, decimation, Arrow-compatible table adapters.
 - `@catmap/charts`: chart renderers, spectral waterfall chart, chart layer helpers, WebGL point renderer, canvas/SVG export utilities.
-- `@catmap/maps`: MapLibre/deck.gl adapters, map layers, instrument map APIs, GeoJSON conversion.
 - `@catmap/geotech`: geotechnical chart/view APIs and domain types.
 - `@catmap/react`: React wrappers only.
 - `apps/playground`: demo, smoke testing, visual QA, and mock scenarios.
@@ -112,7 +108,7 @@ pnpm build
 pnpm lint
 ```
 
-Known note: `pnpm --filter playground build` may warn about a large bundle because the playground pulls MapLibre, uPlot, React, and the demo data into one app. That is acceptable for the playground until a deployed demo needs code splitting.
+Known note: `pnpm --filter playground build` may warn about a large bundle because the playground pulls uPlot, React, and the demo data into one app. That is acceptable for the playground until a deployed demo needs code splitting.
 
 ## Future Work
 
@@ -129,14 +125,14 @@ Known note: `pnpm --filter playground build` may warn about a large bundle becau
 - Add a real Web Worker for decimation only after benchmarks show main-thread cost.
 - Add Arrow IPC parsing only if the library itself must own file ingestion.
 - Add chunked/tiled data sources for very large monitoring datasets.
-- Add viewport-aware filtering for map and chart data.
+- Add viewport-aware filtering for chart data.
 
 ### Rendering
 
 - Add WebGPU only after WebGL/uPlot paths are benchmarked and shown insufficient.
 - Add WASM projection/decimation only behind the existing hook-style API.
 - Add renderer benchmarks in the playground or a dedicated benchmark app.
-- Add visual regression smoke tests for charts, spectral waterfalls, maps, cross-sections, and borehole logs.
+- Add visual regression smoke tests for charts, spectral waterfalls, cross-sections, and borehole logs.
 
 ### Exports And Reporting
 
@@ -147,12 +143,11 @@ Known note: `pnpm --filter playground build` may warn about a large bundle becau
 ### Framework Wrappers
 
 - Add Vue or Svelte wrappers only after there is a real consuming application.
-- Keep wrapper packages thin; domain behavior belongs in `@catmap/geotech` and renderers belong in `@catmap/charts` or `@catmap/maps`.
+- Keep wrapper packages thin; domain behavior belongs in `@catmap/geotech` and renderers belong in `@catmap/charts`.
 
 ## Known Limitations
 
 - The playground is a demo, not an optimized production application.
-- Map contours must be supplied by the caller as precalculated isolines.
 - Browser export helpers do not replace a full reporting engine.
 - Arrow support expects an Arrow-compatible table object, not a raw file buffer.
 - WebGL support is intentionally minimal and focused on point rendering.

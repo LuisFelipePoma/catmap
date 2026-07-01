@@ -4,7 +4,6 @@ import {
   BoreholeLog,
   CrossSectionView,
   InclinometerProfile,
-  InstrumentMap,
   MultiInstrumentChart,
   PiezometerChart,
   RainfallResponseChart,
@@ -12,18 +11,14 @@ import {
   SettlementChart,
   SpectralWaterfallChart
 } from "@catmap/react";
-import "maplibre-gl/dist/maplibre-gl.css";
 import "uplot/dist/uPlot.min.css";
 import {
   boreholeIntervals,
   comparisonSeries,
-  contours,
   crossSectionInstruments,
   crossSectionSeries,
   createSpectralPerformanceData,
-  heatmapPoints,
   inclinometerCampaigns,
-  instruments,
   largeTimeSeries,
   piezometerInstrument,
   piezometerReadings,
@@ -185,20 +180,6 @@ export function App() {
               readings: decimated
             }
           ]}
-        />
-      </section>
-
-      <section className="case map-case">
-        <div className="case-copy">
-          <h2>Instrument map with heatmap and contours</h2>
-          <p>MapLibre heatmap points with precalculated contour isolines.</p>
-        </div>
-        <InstrumentMap
-          center={[-70.31, -27.44]}
-          zoom={14}
-          instruments={instruments}
-          heatmap={{ points: heatmapPoints, radius: 34, opacity: 0.72 }}
-          contours={{ lines: contours, width: 2 }}
         />
       </section>
 

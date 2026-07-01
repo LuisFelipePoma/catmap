@@ -22,7 +22,7 @@ export function PiezometerChart({ className, style, ...options }: PiezometerChar
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.instrument, options.readings, options.thresholds, options.yAxis]);
+  }, [options.instrument, options.readings, options.thresholds, options.yAxis, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 260, ...style }} />;
 }

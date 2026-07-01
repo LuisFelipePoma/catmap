@@ -73,31 +73,6 @@ export function createGeotechMonitoringMockData() {
     { instrumentId: "INC-004", label: "INC-004", uptime: 94, warning: 4, critical: 2 }
   ];
 
-  const heatmapPoints = Array.from({ length: 36 }, (_, index) => {
-    const column = index % 6;
-    const row = Math.floor(index / 6);
-    const longitude = -70.322 + column * 0.005;
-    const latitude = -27.452 + row * 0.004;
-    return {
-      id: `hm-${index + 1}`,
-      longitude,
-      latitude,
-      value: round(1 + pulse(column, 2.5, 3, 4) + pulse(row, 3, 2, 3) + Math.sin(index / 3), 2)
-    };
-  });
-
-  const contourColors = ["#16a34a", "#f59e0b", "#dc2626"];
-  const contours = [1211.5, 1212, 1212.5].map((value, index) => ({
-    id: `contour-${index + 1}`,
-    label: `${value} m`,
-    value,
-    color: contourColors[index]!,
-    coordinates: Array.from({ length: 8 }, (_, pointIndex) => [
-      round(-70.323 + pointIndex * 0.004, 5),
-      round(-27.449 + Math.sin(pointIndex / 2 + index) * 0.004 + index * 0.002, 5)
-    ] as [number, number])
-  }));
-
   const crossSectionSeries = [
     {
       id: "ground",
@@ -187,8 +162,6 @@ export function createGeotechMonitoringMockData() {
     comparisonSeries,
     inclinometerCampaigns,
     sensorHealth,
-    heatmapPoints,
-    contours,
     crossSectionSeries,
     crossSectionInstruments,
     boreholeIntervals,

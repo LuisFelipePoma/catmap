@@ -14,7 +14,6 @@ import type {
   SettlementReading,
   TriggerLevel
 } from "@catmap/geotech";
-import type { ContourLine, GeoInstrument, HeatmapPoint } from "@catmap/maps";
 
 const mock = createGeotechMonitoringMockData();
 
@@ -28,8 +27,6 @@ export const settlementThresholds: TriggerLevel[] = mock.settlementThresholds;
 export const comparisonSeries: GeotechSeries[] = mock.comparisonSeries;
 export const inclinometerCampaigns: InclinometerCampaign[] = mock.inclinometerCampaigns;
 export const sensorHealth: SensorHealthReading[] = mock.sensorHealth;
-export const heatmapPoints: HeatmapPoint[] = mock.heatmapPoints;
-export const contours: ContourLine[] = mock.contours;
 export const crossSectionSeries: CrossSectionSeries[] = mock.crossSectionSeries;
 export const crossSectionInstruments: CrossSectionInstrument[] = mock.crossSectionInstruments;
 export const boreholeIntervals: BoreholeInterval[] = mock.boreholeIntervals;
@@ -65,36 +62,6 @@ export function createSpectralPerformanceData(spectrumCount = 500, pointCount = 
 
   return { x, spectra, vertexCount: spectrumCount * pointCount };
 }
-
-export const instruments: GeoInstrument[] = [
-  {
-    id: "PZ-001",
-    name: "Piezometer PZ-001",
-    type: "piezometer",
-    longitude: -70.31,
-    latitude: -27.44,
-    status: "warning",
-    latestValue: 1212.2
-  },
-  {
-    id: "PZ-002",
-    name: "Piezometer PZ-002",
-    type: "piezometer",
-    longitude: -70.316,
-    latitude: -27.438,
-    status: "normal",
-    latestValue: 1211.7
-  },
-  {
-    id: "SM-014",
-    name: "Settlement marker SM-014",
-    type: "settlement",
-    longitude: -70.305,
-    latitude: -27.445,
-    status: "critical",
-    latestValue: 14.7
-  }
-];
 
 function spectralPulse(index: number, center: number, width: number, height: number): number {
   return Math.max(0, height * (1 - Math.abs(index - center) / width));

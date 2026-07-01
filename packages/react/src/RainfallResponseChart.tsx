@@ -22,7 +22,7 @@ export function RainfallResponseChart({ className, style, ...options }: Rainfall
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.rainfall, options.readings, options.responseAxis, options.thresholds]);
+  }, [options.rainfall, options.readings, options.responseAxis, options.thresholds, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 300, ...style }} />;
 }

@@ -1,3 +1,4 @@
+import type { ChartToolsOptions } from "@catmap/charts";
 import type { ReadingQuality, TriggerLevel } from "../piezometer/types";
 
 export interface SettlementReading {
@@ -23,4 +24,5 @@ export interface SettlementChartOptions {
   showMissingData?: boolean;
   maxPoints?: number;
   height?: number;
+  tools?: ChartToolsOptions;
 }

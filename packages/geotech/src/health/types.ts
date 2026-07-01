@@ -1,3 +1,5 @@
+import type { ChartToolsOptions } from "@catmap/charts";
+
 export interface SensorHealthReading {
   instrumentId: string;
   label: string;
@@ -10,4 +12,5 @@ export interface SensorHealthChartOptions {
   title?: string;
   readings: SensorHealthReading[];
   height?: number;
+  tools?: ChartToolsOptions;
 }

@@ -32,6 +32,7 @@ function toMultiInstrumentSpec(options: MultiInstrumentChartOptions): TimeSeries
     yLabel: options.yLabel ?? options.series[0]?.unit,
     height: options.height,
     maxPoints: options.maxPoints,
+    tools: options.tools,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
     markers: options.series.flatMap(markersForSeries),

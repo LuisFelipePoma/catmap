@@ -30,6 +30,7 @@ function toSensorHealthSpec(options: SensorHealthChartOptions): TimeSeriesChartS
     yLabel: "Percent",
     xTime: false,
     height: options.height ?? 280,
+    tools: options.tools,
     series: [
       { id: "uptime", label: "Uptime", color: "#16a34a", points: true, data: toPoints(options.readings, "uptime") },
       { id: "warning", label: "Warning", color: "#f59e0b", points: true, data: toPoints(options.readings, "warning") },

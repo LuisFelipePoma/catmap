@@ -22,7 +22,7 @@ export function MultiInstrumentChart({ className, style, ...options }: MultiInst
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.series, options.thresholds, options.yLabel]);
+  }, [options.series, options.thresholds, options.yLabel, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 300, ...style }} />;
 }

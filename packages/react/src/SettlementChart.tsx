@@ -22,7 +22,7 @@ export function SettlementChart({ className, style, ...options }: SettlementChar
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.instrument, options.readings, options.thresholds, options.showThresholds]);
+  }, [options.instrument, options.readings, options.thresholds, options.showThresholds, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 260, ...style }} />;
 }

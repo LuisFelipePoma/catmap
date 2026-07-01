@@ -1,3 +1,4 @@
+import type { ChartToolsOptions } from "@catmap/charts";
 import type { ReadingQuality, TriggerLevel } from "../piezometer/types";
 
 export interface InclinometerReading {
@@ -27,4 +28,5 @@ export interface InclinometerProfileOptions {
   showMissingData?: boolean;
   height?: number;
   maxPoints?: number;
+  tools?: ChartToolsOptions;
 }

@@ -36,6 +36,32 @@ export interface ChartMarker {
   color?: string | undefined;
 }
 
+export interface ChartXRange {
+  min: number;
+  max: number;
+}
+
+export interface ChartInspectEvent {
+  index: number;
+  x: number;
+  series: Array<{
+    id: string;
+    label: string;
+    color: string;
+    value: ChartValue;
+    scale?: string | undefined;
+  }>;
+}
+
+export interface ChartToolsOptions {
+  inspect?: boolean | undefined;
+  zoom?: boolean | undefined;
+  pan?: boolean | undefined;
+  reset?: boolean | undefined;
+  onInspect?: ((event: ChartInspectEvent | null) => void) | undefined;
+  onViewportChange?: ((range: ChartXRange | null) => void) | undefined;
+}
+
 export interface TimeSeriesChartSpec {
   title?: string | undefined;
   height?: number | undefined;
@@ -47,6 +73,7 @@ export interface TimeSeriesChartSpec {
   showThresholds?: boolean | undefined;
   thresholds?: readonly ChartThreshold[] | undefined;
   markers?: readonly ChartMarker[] | undefined;
+  tools?: ChartToolsOptions | undefined;
   series: readonly TimeSeriesChartSeries[];
 }
 
@@ -55,6 +82,7 @@ export type UPlotData = [number[], ...ChartValue[][]];
 export interface TimeSeriesChartAdapter extends RendererAdapter {
   update(spec: TimeSeriesChartSpec): void;
   resize(width?: number, height?: number): void;
+  resetViewport(): void;
   readonly dataLength: number;
   readonly seriesKinds: ChartKind[];
 }
@@ -66,6 +94,7 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
   private spec: TimeSeriesChartSpec;
   private data: UPlotData;
   private options: uPlot.Options;
+  private suppressNextXScaleEvent = false;
 
   constructor(spec: TimeSeriesChartSpec) {
     this.spec = spec;
@@ -83,9 +112,13 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
 
   init(container: HTMLElement): void {
     this.container = container;
-    this.options = toUPlotOptions(this.spec, widthOf(container));
+    this.options = toUPlotOptions(this.spec, widthOf(container), {
+      setCursor: this.handleSetCursor,
+      setScale: this.handleSetScale
+    });
     this.data = toUPlotData(this.spec, defaultMaxPoints(this.spec, widthOf(container)));
     this.chart = new uPlot(this.options, this.data, container);
+    this.bindToolEvents();
     this.applyScales();
     this.settleLayout();
 
@@ -99,7 +132,10 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
     this.spec = spec;
     const width = widthOf(this.container);
     this.data = toUPlotData(spec, defaultMaxPoints(spec, width));
-    this.options = toUPlotOptions(spec, width);
+    this.options = toUPlotOptions(spec, width, {
+      setCursor: this.handleSetCursor,
+      setScale: this.handleSetScale
+    });
 
     if (!this.chart) return;
     this.chart.setData(this.data);
@@ -119,6 +155,143 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
 
   resize(width = widthOf(this.container), height = heightOf(this.container, this.spec)): void {
     this.chart?.setSize({ width, height });
+  }
+
+  resetViewport(): void {
+    const full = this.fullXRange();
+    if (this.chart && full) {
+      this.suppressNextXScaleEvent = true;
+      this.chart.setScale("x", full);
+      this.suppressNextXScaleEvent = false;
+    }
+    this.spec.tools?.onViewportChange?.(null);
+  }
+
+  private bindToolEvents(): void {
+    this.chart?.over.addEventListener("wheel", this.handleWheel, { passive: false });
+    this.chart?.over.addEventListener("dblclick", this.handleDoubleClick);
+  }
+
+  private readonly handleSetCursor = (chart: uPlot): void => {
+    const tools = this.spec.tools;
+    if (!toolEnabled(tools, "inspect") || !tools?.onInspect) return;
+
+    const index = chart.cursor.idx;
+    const x = typeof index === "number" ? chart.data[0]?.[index] : undefined;
+    if (index === null || index === undefined || typeof x !== "number" || !Number.isFinite(x)) {
+      tools.onInspect(null);
+      return;
+    }
+
+    tools.onInspect({
+      index,
+      x: fromUPlotX(x, this.spec),
+      series: this.spec.series.map((series, seriesIndex) => ({
+        id: series.id,
+        label: series.label,
+        color: series.color,
+        value: normalizeChartValue(chart.data[seriesIndex + 1]?.[index]),
+        ...(series.scale ? { scale: series.scale } : {})
+      }))
+    });
+  };
+
+  private readonly handleSetScale = (_chart: uPlot, scaleKey: string): void => {
+    if (scaleKey !== "x") return;
+    if (this.suppressNextXScaleEvent) {
+      this.suppressNextXScaleEvent = false;
+      return;
+    }
+    this.emitViewportChange();
+  };
+
+  private readonly handleWheel = (event: WheelEvent): void => {
+    const chart = this.chart;
+    const tools = this.spec.tools;
+    if (!chart) return;
+
+    const canPan = toolEnabled(tools, "pan");
+    const canZoom = toolEnabled(tools, "zoom");
+    if (!canPan && !canZoom) return;
+
+    const full = this.fullXRange();
+    const current = this.currentXRange();
+    if (!full || !current) return;
+
+    const pan = canPan && (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY));
+    if (!pan && !canZoom) return;
+
+    event.preventDefault();
+    const span = current.max - current.min || full.max - full.min || 1;
+    if (pan) {
+      const delta = event.deltaX || event.deltaY;
+      const offset = (delta / Math.max(chart.width, 1)) * span;
+      this.setXRange({ min: current.min + offset, max: current.max + offset });
+      return;
+    }
+
+    const rect = chart.over.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const center = Number.isFinite(x) ? chart.posToVal(x, "x") : current.min + span / 2;
+    const nextSpan = clamp(span * (event.deltaY < 0 ? 0.8 : 1.25), (full.max - full.min || 1) / 120, full.max - full.min || 1);
+    if (nextSpan >= (full.max - full.min || 1) * 0.995) {
+      this.resetViewport();
+      return;
+    }
+
+    const ratio = clamp((center - current.min) / span, 0, 1);
+    this.setXRange({
+      min: center - nextSpan * ratio,
+      max: center + nextSpan * (1 - ratio)
+    });
+  };
+
+  private readonly handleDoubleClick = (): void => {
+    if (toolEnabled(this.spec.tools, "reset")) this.resetViewport();
+  };
+
+  private setXRange(rangeValue: ChartXRange): void {
+    const chart = this.chart;
+    const full = this.fullXRange();
+    if (!chart || !full) return;
+
+    const next = normalizeXRange(rangeValue, full);
+    if (!next) {
+      this.resetViewport();
+      return;
+    }
+    chart.setScale("x", next);
+  }
+
+  private currentXRange(): ChartXRange | null {
+    const scale = this.chart?.scales.x;
+    const min = scale?.min;
+    const max = scale?.max;
+    if (Number.isFinite(min) && Number.isFinite(max)) {
+      return { min: min!, max: max! };
+    }
+    return this.fullXRange();
+  }
+
+  private fullXRange(): ChartXRange | null {
+    return dataRange(this.data[0]);
+  }
+
+  private emitViewportChange(): void {
+    const callback = this.spec.tools?.onViewportChange;
+    if (!callback) return;
+
+    const full = this.fullXRange();
+    const current = this.currentXRange();
+    if (!full || !current || isFullRange(current, full)) {
+      callback(null);
+      return;
+    }
+
+    callback({
+      min: fromUPlotX(current.min, this.spec),
+      max: fromUPlotX(current.max, this.spec)
+    });
   }
 
   private settleLayout(): void {
@@ -153,6 +326,8 @@ export class UPlotAdapter implements TimeSeriesChartAdapter {
 
   destroy(): void {
     this.resizeObserver?.disconnect();
+    this.chart?.over.removeEventListener("wheel", this.handleWheel);
+    this.chart?.over.removeEventListener("dblclick", this.handleDoubleClick);
     this.chart?.destroy();
     this.resizeObserver = undefined;
     this.chart = undefined;
@@ -169,6 +344,42 @@ function dataRange(values: readonly number[]): { min: number; max: number } | nu
     if (value > max) max = value;
   }
   return min === Infinity ? null : { min, max };
+}
+
+function toolEnabled(tools: ChartToolsOptions | undefined, key: keyof Pick<ChartToolsOptions, "inspect" | "zoom" | "pan" | "reset">): boolean {
+  return tools?.[key] !== false;
+}
+
+function normalizeChartValue(value: unknown): ChartValue {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function fromUPlotX(value: number, spec: TimeSeriesChartSpec): number {
+  return spec.xTime === false ? value : value * 1000;
+}
+
+function normalizeXRange(rangeValue: ChartXRange, full: ChartXRange): ChartXRange | null {
+  const fullSpan = full.max - full.min || 1;
+  const span = clamp(rangeValue.max - rangeValue.min || fullSpan, fullSpan / 120, fullSpan);
+  if (span >= fullSpan * 0.995) return null;
+
+  let min = clamp(rangeValue.min, full.min, full.max - span);
+  let max = min + span;
+  if (max > full.max) {
+    max = full.max;
+    min = max - span;
+  }
+  return { min, max };
+}
+
+function isFullRange(rangeValue: ChartXRange, full: ChartXRange): boolean {
+  const span = full.max - full.min || 1;
+  return Math.abs(rangeValue.min - full.min) <= span * 1e-9 && Math.abs(rangeValue.max - full.max) <= span * 1e-9;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  if (max < min) return min;
+  return Math.max(min, Math.min(max, value));
 }
 
 function paddedMinMax(min: number, max: number, includeZero: boolean): { min: number; max: number } {
@@ -193,7 +404,12 @@ export function toUPlotData(spec: TimeSeriesChartSpec, maxPoints: number): UPlot
   ];
 }
 
-function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options {
+interface UPlotToolHooks {
+  setCursor: (chart: uPlot) => void;
+  setScale: (chart: uPlot, scaleKey: string) => void;
+}
+
+function toUPlotOptions(spec: TimeSeriesChartSpec, width: number, toolHooks?: UPlotToolHooks): uPlot.Options {
   const series = chartSeries(spec);
   const yNeedsZero = series.some((series) => (series.scale ?? "y") === "y" && series.kind === "bar");
   const scales: Record<string, uPlot.Scale> = {
@@ -209,6 +425,8 @@ function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options
     scales.rainfall = { dir: -1, range: paddedRange(true) };
     axes.push({ label: "Rainfall", scale: "rainfall", side: 1 });
   }
+  const inspect = toolEnabled(spec.tools, "inspect");
+  const zoom = toolEnabled(spec.tools, "zoom");
 
   return {
     ...(spec.title ? { title: spec.title } : {}),
@@ -216,6 +434,13 @@ function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options
     height: spec.height ?? 300,
     scales,
     axes,
+    legend: { show: inspect, live: inspect },
+    cursor: {
+      show: inspect,
+      x: inspect,
+      y: inspect,
+      drag: { x: zoom, y: false, setScale: zoom, dist: 5 }
+    },
     series: [
       { label: "Time" },
       ...series.map((series) => {
@@ -244,6 +469,12 @@ function toUPlotOptions(spec: TimeSeriesChartSpec, width: number): uPlot.Options
       })
     ],
     hooks: {
+      ...(toolHooks
+        ? {
+            setCursor: [toolHooks.setCursor],
+            setScale: [toolHooks.setScale]
+          }
+        : {}),
       draw: [
         (chart) => {
           if (spec.showThresholds === false) return;

@@ -1,3 +1,5 @@
+import type { ChartToolsOptions } from "@catmap/charts";
+
 export type ReadingQuality = "valid" | "warning" | "critical" | "missing";
 
 export interface PiezometerReading {
@@ -34,4 +36,5 @@ export interface PiezometerChartOptions {
   showThresholds?: boolean;
   maxPoints?: number;
   height?: number;
+  tools?: ChartToolsOptions;
 }

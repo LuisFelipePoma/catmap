@@ -27,6 +27,7 @@ function toSettlementSpec(options: SettlementChartOptions): TimeSeriesChartSpec 
     yLabel: "Settlement",
     height: options.height,
     maxPoints: options.maxPoints,
+    tools: options.tools,
     showThresholds: options.showThresholds,
     thresholds: options.thresholds,
     markers:

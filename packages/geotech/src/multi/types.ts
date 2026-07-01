@@ -1,3 +1,4 @@
+import type { ChartToolsOptions } from "@catmap/charts";
 import type { ReadingQuality, TriggerLevel } from "../piezometer/types";
 
 export interface GeotechSeriesPoint {
@@ -22,4 +23,5 @@ export interface MultiInstrumentChartOptions {
   showThresholds?: boolean;
   maxPoints?: number;
   height?: number;
+  tools?: ChartToolsOptions;
 }

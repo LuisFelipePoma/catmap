@@ -24,6 +24,10 @@ export abstract class BaseTimeSeriesChart<TOptions extends object, TData> {
     this.adapter.resize();
   }
 
+  resetViewport(): void {
+    this.adapter.resetViewport();
+  }
+
   destroy(): void {
     this.adapter.destroy();
   }

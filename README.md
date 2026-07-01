@@ -1,18 +1,18 @@
 # catmap
 
-`catmap` is a TypeScript visualization library for geotechnical monitoring systems. It provides time-series charts, instrument maps, cross-sections, borehole logs, data utilities, and React wrappers while keeping the core contracts framework-agnostic.
+`catmap` is a TypeScript visualization library for geotechnical monitoring systems. It provides time-series charts, cross-sections, borehole logs, data utilities, and React wrappers while keeping the core contracts framework-agnostic.
 
-The library is split by responsibility: data parsing and decimation live in `@catmap/data`, chart renderers live in `@catmap/charts`, map renderers live in `@catmap/maps`, geotechnical views live in `@catmap/geotech`, and React bindings live in `@catmap/react`.
+The library is split by responsibility: data parsing and decimation live in `@catmap/data`, chart renderers live in `@catmap/charts`, geotechnical views live in `@catmap/geotech`, and React bindings live in `@catmap/react`.
 
 ## Features
 
 - Piezometer, settlement, rainfall-response, inclinometer, sensor-health, multi-instrument, and spectral waterfall charts
-- MapLibre instrument maps with markers, native heatmaps, and precalculated contour isolines
+- Chart analysis tools for inspection, viewport zooming, panning, and reset callbacks
 - SVG cross-section views and borehole logs
 - Time-series decimation, bucket aggregation, in-memory data sources, and Arrow-compatible column loading
 - uPlot time-series rendering, Canvas 2D spectral waterfall rendering, and a lightweight WebGL point renderer with optional OffscreenCanvas support
 - Browser PNG/PDF export helpers for canvas and SVG output
-- React wrappers for geotechnical charts, spectral waterfalls, maps, cross-sections, and borehole logs
+- React wrappers for geotechnical charts, spectral waterfalls, cross-sections, and borehole logs
 
 ## Packages
 
@@ -22,8 +22,7 @@ The library is split by responsibility: data parsing and decimation live in `@ca
 | `@catmap/data` | Time-series types, data sources, decimation, aggregation, mock data, and Arrow-like column import |
 | `@catmap/charts` | uPlot adapter, spectral waterfall chart, chart layer helpers, WebGL point renderer, and browser export utilities |
 | `@catmap/geotech` | Domain APIs for geotechnical charts, cross-sections, and borehole logs |
-| `@catmap/maps` | MapLibre adapter, instrument maps, heatmap/contour layers, and GeoJSON helpers |
-| `@catmap/react` | React components wrapping `@catmap/charts`, `@catmap/geotech`, and `@catmap/maps` APIs |
+| `@catmap/react` | React components wrapping `@catmap/charts` and `@catmap/geotech` APIs |
 | `apps/playground` | Vite playground using mock geotechnical data |
 
 ## Installation
@@ -38,17 +37,15 @@ pnpm dev
 For an external application, install only the packages you need once they are published:
 
 ```bash
-pnpm add @catmap/react @catmap/charts @catmap/geotech @catmap/maps @catmap/data
+pnpm add @catmap/react @catmap/charts @catmap/geotech @catmap/data
 ```
 
 Peer/runtime dependencies depend on the package surface you use:
 
 - React components require `react >=18`.
-- Map views require `maplibre-gl` styles to be loaded by the application.
 - Time-series charts require `uplot` styles to be loaded by the application.
 
 ```ts
-import "maplibre-gl/dist/maplibre-gl.css";
 import "uplot/dist/uPlot.min.css";
 ```
 
@@ -60,7 +57,6 @@ import "uplot/dist/uPlot.min.css";
 import {
   BoreholeLog,
   CrossSectionView,
-  InstrumentMap,
   PiezometerChart,
   SpectralWaterfallChart
 } from "@catmap/react";
@@ -80,37 +76,9 @@ export function MonitoringDashboard() {
         ]}
         yAxis="waterLevel"
         showThresholds
-      />
-
-      <InstrumentMap
-        center={[-70.31, -27.44]}
-        zoom={14}
-        instruments={[
-          {
-            id: "PZ-001",
-            name: "Piezometer PZ-001",
-            type: "piezometer",
-            longitude: -70.31,
-            latitude: -27.44,
-            status: "warning"
-          }
-        ]}
-        heatmap={{
-          points: [{ longitude: -70.31, latitude: -27.44, value: 1.8 }]
-        }}
-        contours={{
-          lines: [
-            {
-              id: "wl-1212",
-              value: 1212,
-              label: "1212 m",
-              coordinates: [
-                [-70.32, -27.45],
-                [-70.31, -27.44],
-                [-70.3, -27.43]
-              ]
-            }
-          ]
+        tools={{
+          onInspect: (event) => console.log(event),
+          onViewportChange: (range) => console.log(range)
         }}
       />
 
@@ -166,23 +134,9 @@ const chart = new PiezometerChart(container, {
 });
 
 chart.updateData(nextReadings);
+chart.resetViewport();
 chart.resize();
 chart.destroy();
-```
-
-```ts
-import { InstrumentMap } from "@catmap/maps";
-
-const map = new InstrumentMap(container, {
-  center: [-70.31, -27.44],
-  zoom: 14,
-  basemap: "osm"
-});
-
-map.addInstrumentLayer({ instruments });
-map.setHeatmap({ points: heatmapPoints, radius: 32 });
-map.setContours({ lines: contourLines, width: 2 });
-map.destroy();
 ```
 
 ```ts
@@ -271,7 +225,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for completed phases, design constraints,
 
 - `@catmap/core` stays framework-agnostic and renderer-agnostic.
 - React components live only in `@catmap/react`.
-- Concrete rendering engines stay behind package boundaries: uPlot and Canvas 2D in `@catmap/charts`, MapLibre/deck.gl in `@catmap/maps`.
+- Concrete rendering engines stay behind package boundaries: uPlot and Canvas 2D in `@catmap/charts`.
 - Large-data paths prefer typed arrays, Arrow-compatible columns, chunks, or tiles over object-heavy hot paths.
 - WebGPU, Rust/WASM, backend tiling, and custom parsers should be added only after benchmarks show the current path is the bottleneck.
 

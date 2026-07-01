@@ -22,7 +22,7 @@ export function SensorHealthChart({ className, style, ...options }: SensorHealth
 
   useEffect(() => {
     chartRef.current?.updateOptions(options);
-  }, [options.title, options.readings]);
+  }, [options.title, options.readings, options.tools]);
 
   return <div ref={ref} className={className} style={{ minHeight: 280, ...style }} />;
 }

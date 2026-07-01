@@ -11,7 +11,6 @@ export default defineConfig({
       "@catmap/data": fileURLToPath(new URL("../../packages/data/src/index.ts", import.meta.url)),
       "@catmap/charts": fileURLToPath(new URL("../../packages/charts/src/index.ts", import.meta.url)),
       "@catmap/geotech": fileURLToPath(new URL("../../packages/geotech/src/index.ts", import.meta.url)),
-      "@catmap/maps": fileURLToPath(new URL("../../packages/maps/src/index.ts", import.meta.url)),
       "@catmap/react": fileURLToPath(new URL("../../packages/react/src/index.ts", import.meta.url))
     }
   }
